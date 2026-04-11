@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+
+<html lang="vi"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#1e3fae",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#121520",
+                    },
+                    fontFamily: {
+                        "display": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<title>Quản lý Ứng viên - Nhà Tuyển Dụng</title>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 antialiased">
+<div class="relative flex min-h-screen w-full overflow-x-hidden">
+<!-- Sidebar -->
+<aside class="flex w-72 flex-col border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-background-dark h-screen sticky top-0">
+<div class="flex items-center gap-3 px-8 py-6 border-b border-slate-100 dark:border-slate-800">
+<div class="flex size-8 items-center justify-center rounded-lg bg-primary text-white">
+<span class="material-symbols-outlined text-xl">work</span>
+</div>
+<h2 class="text-lg font-bold tracking-tight">Recruiter Pro</h2>
+</div>
+<div class="flex flex-col gap-1 p-4 grow">
+<div class="px-4 py-2">
+<h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Điều hướng</h3>
+</div>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-medium">Bảng điều khiển</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors" href="#">
+<span class="material-symbols-outlined">description</span>
+<span class="text-sm font-medium">Quản lý Tin đăng</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg bg-primary/10 text-primary dark:bg-primary/20 transition-colors" href="#">
+<span class="material-symbols-outlined font-fill">group</span>
+<span class="text-sm font-bold">Ứng viên</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors" href="#">
+<span class="material-symbols-outlined">add_box</span>
+<span class="text-sm font-medium">Đăng tin mới</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors" href="#">
+<span class="material-symbols-outlined">apartment</span>
+<span class="text-sm font-medium">Hồ sơ công ty</span>
+</a>
+</div>
+<div class="p-4 border-t border-slate-100 dark:border-slate-800">
+<div class="flex items-center gap-3 px-4 py-3">
+<div class="size-10 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Avatar của nhà tuyển dụng" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCzy7fsKBFIhxQg0Sa3g-AoMnm9lJa1IntAdx1YfgICjPt4vqc1LAGe4Tsk7KS3g-wRgC5ixaVR5mHEevqfhKUSXUu2FxVLgdMszjTx1QE81g4J-_pvP0jhtRXyPhpI3yKIXinrSjy-yd2SukFVDOJYBEiqVof4kr9FOIrE2ZwtzCWOnFTnbF1nG_zQ6-HyyDDW5lNwULi4DHgqpOSn-N_QZS0CuksD5W3EGl8i_tIqIccnv92c2hLj_2MtMJXBvtYa2_tgZe3n4O1X"/>
+</div>
+<div class="flex flex-col">
+<p class="text-sm font-bold truncate">TechCorp Vietnam</p>
+<p class="text-xs text-slate-500 truncate">Admin Account</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 flex flex-col min-w-0">
+<!-- Header -->
+<header class="flex h-16 items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-background-dark px-8 sticky top-0 z-10">
+<div class="flex-1 max-w-xl">
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">search</span>
+<input class="w-full h-10 pl-10 pr-4 rounded-lg border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm outline-none" placeholder="Tìm kiếm ứng viên, vị trí..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="flex size-10 items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors relative">
+<span class="material-symbols-outlined text-slate-600 dark:text-slate-400">notifications</span>
+<span class="absolute top-2 right-2.5 size-2 bg-red-500 rounded-full border-2 border-white dark:border-background-dark"></span>
+</button>
+<button class="flex size-10 items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+<span class="material-symbols-outlined text-slate-600 dark:text-slate-400">settings</span>
+</button>
+</div>
+</header>
+<!-- Page Content -->
+<div class="p-8">
+<div class="flex flex-col gap-1 mb-8">
+<h1 class="text-3xl font-black tracking-tight text-slate-900 dark:text-slate-50">Quản lý Ứng viên</h1>
+<p class="text-slate-500 dark:text-slate-400">Theo dõi và quản lý các hồ sơ ứng tuyển từ các tin tuyển dụng của bạn.</p>
+</div>
+<!-- Filters -->
+<div class="flex flex-wrap gap-2 mb-8 bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+<button class="px-5 py-2 text-sm font-semibold rounded-lg bg-primary text-white shadow-md shadow-primary/20 transition-all">Tất cả</button>
+<button class="px-5 py-2 text-sm font-medium rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all">Mới (12)</button>
+<button class="px-5 py-2 text-sm font-medium rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all">Đang xem xét (8)</button>
+<button class="px-5 py-2 text-sm font-medium rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all">Phỏng vấn (5)</button>
+<button class="px-5 py-2 text-sm font-medium rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all text-green-600 dark:text-green-400">Đã tuyển (2)</button>
+<button class="px-5 py-2 text-sm font-medium rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all text-red-600 dark:text-red-400">Từ chối (14)</button>
+</div>
+<!-- Table -->
+<div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800">
+<th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Ứng viên</th>
+<th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Vị trí ứng tuyển</th>
+<th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Ngày nộp</th>
+<th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Trạng thái</th>
+<th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 text-right">Thao tác</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+<!-- Row 1 -->
+<tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="size-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm">NA</div>
+<div class="flex flex-col">
+<span class="font-bold text-slate-900 dark:text-slate-100">Nguyễn Văn An</span>
+<span class="text-xs text-slate-500">an.nguyen@email.com</span>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-sm font-medium text-slate-600 dark:text-slate-400">Senior React Developer</span>
+</td>
+<td class="px-6 py-4 text-sm text-slate-500 dark:text-slate-400">12/10/2023</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 uppercase tracking-tighter">Mới</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="text-primary hover:underline text-sm font-bold">Xem hồ sơ</button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="size-10 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Ảnh chân dung ứng viên nữ" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBGGTG8TEz1fgcOGJqZL7fBvrBJog8ySESgVbUkA8cABd9p8mV5AzfJgg_WJiw7tGBVEqRoaflr0DzifZV1G_AvfybFS85YbCQfIO7SeztOKOPFKjodwqTdPdArKRsoPFhMX6oDlnXaxLgqFvHiT9J6b4W3keXlCqbMcPlw7I3vKBqkoCb4WIqHfSfWVCiQ5Cya7Md6EfaJ9SJHV0W9nctvT6zYsecwT0Tua8CPv3fjcRg1jWprE07w8k6AagAiiUrJn5MYnNHRQksA"/>
+</div>
+<div class="flex flex-col">
+<span class="font-bold text-slate-900 dark:text-slate-100">Trần Thị Bích</span>
+<span class="text-xs text-slate-500">bich.tran@email.com</span>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-sm font-medium text-slate-600 dark:text-slate-400">Product Designer (UI/UX)</span>
+</td>
+<td class="px-6 py-4 text-sm text-slate-500 dark:text-slate-400">10/10/2023</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 uppercase tracking-tighter">Phỏng vấn</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="text-primary hover:underline text-sm font-bold">Xem hồ sơ</button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="size-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-bold text-sm">LC</div>
+<div class="flex flex-col">
+<span class="font-bold text-slate-900 dark:text-slate-100">Lê Văn Cường</span>
+<span class="text-xs text-slate-500">cuong.le@email.com</span>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-sm font-medium text-slate-600 dark:text-slate-400">Marketing Manager</span>
+</td>
+<td class="px-6 py-4 text-sm text-slate-500 dark:text-slate-400">08/10/2023</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400 uppercase tracking-tighter">Đang xem xét</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="text-primary hover:underline text-sm font-bold">Xem hồ sơ</button>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="size-10 rounded-full bg-green-100 dark:bg-green-900/20 text-green-600 flex items-center justify-center font-bold text-sm">HD</div>
+<div class="flex flex-col">
+<span class="font-bold text-slate-900 dark:text-slate-100">Hoàng Minh Dũng</span>
+<span class="text-xs text-slate-500">dung.hm@email.com</span>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-sm font-medium text-slate-600 dark:text-slate-400">Project Manager</span>
+</td>
+<td class="px-6 py-4 text-sm text-slate-500 dark:text-slate-400">05/10/2023</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 uppercase tracking-tighter">Đã tuyển</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="text-primary hover:underline text-sm font-bold">Xem hồ sơ</button>
+</td>
+</tr>
+<!-- Row 5 -->
+<tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="size-10 rounded-full bg-red-100 dark:bg-red-900/20 text-red-600 flex items-center justify-center font-bold text-sm">PH</div>
+<div class="flex flex-col">
+<span class="font-bold text-slate-900 dark:text-slate-100">Phạm Văn Hưng</span>
+<span class="text-xs text-slate-500">hung.pham@email.com</span>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-sm font-medium text-slate-600 dark:text-slate-400">Junior Java Developer</span>
+</td>
+<td class="px-6 py-4 text-sm text-slate-500 dark:text-slate-400">01/10/2023</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 uppercase tracking-tighter">Từ chối</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="text-primary hover:underline text-sm font-bold">Xem hồ sơ</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination -->
+<div class="flex items-center justify-between px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-800/20">
+<p class="text-sm text-slate-500">Hiển thị <span class="font-bold">1-5</span> của <span class="font-bold">53</span> ứng viên</p>
+<div class="flex items-center gap-2">
+<button class="flex items-center justify-center size-8 rounded border border-slate-200 dark:border-slate-700 text-slate-400 cursor-not-allowed">
+<span class="material-symbols-outlined text-sm">chevron_left</span>
+</button>
+<button class="flex items-center justify-center size-8 rounded border border-primary bg-primary text-white text-sm font-bold">1</button>
+<button class="flex items-center justify-center size-8 rounded border border-slate-200 dark:border-slate-700 text-sm hover:bg-slate-50 dark:hover:bg-slate-800">2</button>
+<button class="flex items-center justify-center size-8 rounded border border-slate-200 dark:border-slate-700 text-sm hover:bg-slate-50 dark:hover:bg-slate-800">3</button>
+<span class="text-slate-400">...</span>
+<button class="flex items-center justify-center size-8 rounded border border-slate-200 dark:border-slate-700 text-sm hover:bg-slate-50 dark:hover:bg-slate-800">11</button>
+<button class="flex items-center justify-center size-8 rounded border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800">
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>
