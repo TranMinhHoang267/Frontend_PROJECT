@@ -186,6 +186,18 @@ export default function CandidateDetail() {
     : null;
 
   const avatarInitials = fullName.split(" ").filter(Boolean).slice(0, 2).map((w: string) => w[0]).join("").toUpperCase();
+  
+  // Status Config
+  const STATUS_MAP: Record<string, { label: string; color: string; icon: string }> = {
+    submitted: { label: "Mới nộp", color: "bg-slate-100 text-slate-600 border-slate-200", icon: "mail" },
+    under_review: { label: "Đang xem xét", color: "bg-blue-50 text-blue-600 border-blue-200", icon: "visibility" },
+    interview: { label: "Hẹn phỏng vấn", color: "bg-purple-50 text-purple-600 border-purple-200", icon: "calendar_month" },
+    accepted: { label: "Đã tuyển dụng", color: "bg-green-50 text-green-600 border-green-200", icon: "check_circle" },
+    rejected: { label: "Đã từ chối", color: "bg-red-50 text-red-600 border-red-200", icon: "cancel" },
+  };
+
+  const currentStatus = app.status || 'submitted';
+  const statusInfo = STATUS_MAP[currentStatus] || STATUS_MAP.submitted;
 
   // Format date: "2022-09-10" → "09/2022", otherwise return as-is
   const fmtDate = (d?: string | null): string => {
@@ -232,7 +244,13 @@ export default function CandidateDetail() {
                 <span className="absolute bottom-1 right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white block"></span>
               </div>
               <div>
-                <h1 className="text-2xl font-extrabold text-slate-900 leading-tight">{fullName}</h1>
+                <div className="flex items-center gap-3">
+                  <h1 className="text-2xl font-extrabold text-slate-900 leading-tight">{fullName}</h1>
+                  <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border ${statusInfo.color}`}>
+                    <span className="material-symbols-outlined text-[14px]">{statusInfo.icon}</span>
+                    {statusInfo.label.toUpperCase()}
+                  </div>
+                </div>
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-sm text-slate-500 font-medium">
                   {headline && (
                     <div className="flex items-center gap-1 text-blue-600 font-semibold">
@@ -390,37 +408,58 @@ export default function CandidateDetail() {
 
           {/* Action buttons at the bottom */}
           <div className="pt-6 mt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex gap-2">
-              <button
-                onClick={() => handleUpdateStatus("under_review")}
-                className="flex items-center gap-1.5 px-4 py-2 border border-blue-200 bg-blue-50 text-blue-700 rounded-xl text-sm font-semibold hover:bg-blue-100 transition-colors"
-                title="Chuyển sang trạng thái đang xem xét"
-              >
-                <span className="material-symbols-outlined text-[18px]">visibility</span> Đang xem xét
-              </button>
-              <button
-                onClick={() => handleUpdateStatus("interview")}
-                className="flex items-center gap-1.5 px-4 py-2 border border-purple-200 bg-purple-50 text-purple-700 rounded-xl text-sm font-semibold hover:bg-purple-100 transition-colors"
-                title="Lên lịch phỏng vấn"
-              >
-                <span className="material-symbols-outlined text-[18px]">calendar_month</span> Phỏng vấn
-              </button>
-            </div>
-            
-            <div className="flex gap-2">
-              <button
-                onClick={() => handleUpdateStatus("rejected")}
-                className="flex items-center gap-1.5 px-6 py-2 border border-red-200 bg-red-50 text-red-600 rounded-xl text-sm font-semibold hover:bg-red-100 transition-colors"
-              >
-                <span className="material-symbols-outlined text-[18px]">close</span> Từ chối
-              </button>
-              <button
-                onClick={() => handleUpdateStatus("accepted")}
-                className="flex items-center gap-1.5 px-6 py-2 bg-green-600 text-white rounded-xl text-sm font-semibold hover:bg-green-700 shadow-sm transition-colors"
-              >
-                Đã tuyển <span className="material-symbols-outlined text-[18px]">check_circle</span>
-              </button>
-            </div>
+            {/* Nếu trạng thái kết thúc (accepted/rejected), show thông báo nhẹ */}
+            {(currentStatus === 'accepted' || currentStatus === 'rejected') ? (
+              <div className={`flex items-center gap-2 px-4 py-3 rounded-xl border w-full ${statusInfo.color}`}>
+                <span className="material-symbols-outlined">{statusInfo.icon}</span>
+                <p className="text-sm font-semibold">Hồ sơ này đã ở trạng thái: {statusInfo.label}</p>
+              </div>
+            ) : (
+              <>
+                <div className="flex gap-2">
+                  {/* Chỉ hiện 'Đang xem xét' nếu đang ở 'submitted' */}
+                  {currentStatus === 'submitted' && (
+                    <button
+                      onClick={() => handleUpdateStatus("under_review")}
+                      className="flex items-center gap-1.5 px-4 py-2 border border-blue-200 bg-blue-50 text-blue-700 rounded-xl text-sm font-semibold hover:bg-blue-100 transition-colors"
+                      title="Chuyển sang trạng thái đang xem xét"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">visibility</span> Đang xem xét
+                    </button>
+                  )}
+                  
+                  {/* Phỏng vấn: Hiện nếu là submitted hoặc under_review */}
+                  {(currentStatus === 'submitted' || currentStatus === 'under_review') && (
+                    <button
+                      onClick={() => handleUpdateStatus("interview")}
+                      className="flex items-center gap-1.5 px-4 py-2 border border-purple-200 bg-purple-50 text-purple-700 rounded-xl text-sm font-semibold hover:bg-purple-100 transition-colors"
+                      title="Lên lịch phỏng vấn"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">calendar_month</span> Phỏng vấn
+                    </button>
+                  )}
+
+                  {/* Tuyển dụng: Chỉ hiện nếu đang ở trạng thái Interview */}
+                  {currentStatus === 'interview' && (
+                    <button
+                      onClick={() => handleUpdateStatus("accepted")}
+                      className="flex items-center gap-1.5 px-6 py-2 bg-green-600 text-white rounded-xl text-sm font-semibold hover:bg-green-700 shadow-sm transition-colors"
+                    >
+                      Đã tuyển <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                    </button>
+                  )}
+                </div>
+                
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleUpdateStatus("rejected")}
+                    className="flex items-center gap-1.5 px-6 py-2 border border-red-200 bg-red-50 text-red-600 rounded-xl text-sm font-semibold hover:bg-red-100 transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">close</span> Từ chối
+                  </button>
+                </div>
+              </>
+            )}
           </div>
 
           <div className="h-8" />
@@ -576,13 +615,13 @@ function ContactRow({
   value: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center gap-3 p-4 rounded-xl border border-slate-100 bg-slate-50/60">
-      <div className="w-9 h-9 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center text-slate-500 flex-shrink-0">
+    <div className="flex items-center gap-3 p-4 rounded-xl border border-slate-200 bg-white shadow-sm hover:border-blue-300 transition-colors">
+      <div className="w-9 h-9 rounded-full bg-blue-50 border border-blue-100 shadow-sm flex items-center justify-center text-blue-600 flex-shrink-0">
         <span className="material-symbols-outlined text-[18px]">{icon}</span>
       </div>
       <div>
-        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">{label}</p>
-        <div className="text-sm font-semibold text-slate-800">{value}</div>
+        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">{label}</p>
+        <div className="text-[15px] font-bold text-slate-900">{value}</div>
       </div>
     </div>
   );

@@ -1,14 +1,19 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { 
+  Loader2, Search, Mail, Calendar, 
+  ArrowUpRight, Users, CheckCircle, 
+  Clock, Briefcase
+} from "lucide-react";
 import { employerApplicationService } from "../../services/employerApplication.service";
 import type { EmployerApplication } from "../../services/employerApplication.service";
 
-const STATUS_CONFIG: Record<string, { label: string, classes: string }> = {
-  submitted: { label: "MỚI", classes: "bg-blue-100 text-[#1e3fae]" },
-  under_review: { label: "ĐANG XEM XÉT", classes: "bg-purple-100 text-[#6b21a8]" },
-  interview: { label: "PHỎNG VẤN", classes: "bg-yellow-100 text-[#a16207]" },
-  accepted: { label: "ĐÃ TUYỂN", classes: "bg-green-100 text-[#15803d]" },
-  rejected: { label: "TỪ CHỐI", classes: "bg-red-100 text-[#b91c1c]" }
+const STATUS_CONFIG: Record<string, { label: string, classes: string, dot: string }> = {
+  submitted: { label: "MỚI", classes: "bg-blue-50 text-blue-700 border-blue-100", dot: "bg-blue-500" },
+  under_review: { label: "XEM XÉT", classes: "bg-purple-50 text-purple-700 border-purple-100", dot: "bg-purple-500" },
+  interview: { label: "PHỎNG VẤN", classes: "bg-amber-50 text-amber-700 border-amber-100", dot: "bg-amber-500" },
+  accepted: { label: "ĐÃ TUYỂN", classes: "bg-emerald-50 text-emerald-700 border-emerald-100", dot: "bg-emerald-500" },
+  rejected: { label: "TỪ CHỐI", classes: "bg-rose-50 text-rose-700 border-rose-100", dot: "bg-rose-500" }
 };
 
 const TABS = [
@@ -24,6 +29,7 @@ export default function CandidatesManager() {
   const [activeTab, setActiveTab] = useState("all");
   const [applicants, setApplicants] = useState<EmployerApplication[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
   const [stats, setStats] = useState<Record<string, number>>({});
   const navigate = useNavigate();
 
@@ -36,21 +42,17 @@ export default function CandidatesManager() {
     try {
       const statusParam = activeTab === "all" ? undefined : activeTab;
       const res = await employerApplicationService.getApplicants({ status: statusParam });
-      
-      console.log("[CandidatesManager] Applicants từ API:", res);
-
       const data: EmployerApplication[] = Array.isArray(res) ? res : [];
       setApplicants(data);
       
-      // Đếm stats từ dữ liệu thực
-      if (data.length > 0) {
+      // Update stats from full list if on "all" tab
+      if (activeTab === "all") {
         const counts: Record<string, number> = {};
         data.forEach((app) => {
           counts[app.status] = (counts[app.status] || 0) + 1;
         });
         setStats(counts);
       }
-
     } catch (error) {
       console.error("Lỗi lấy danh sách ứng viên:", error);
       setApplicants([]);
@@ -59,135 +61,178 @@ export default function CandidatesManager() {
     }
   };
 
-  const handleViewProfile = (app: EmployerApplication, currId: string | number) => {
-    console.log("[handleViewProfile] navigating with id:", currId, "| full app object:", app);
+  const filteredApplicants = applicants.filter(app => {
+    const fullName = app.candidate?.full_name || `${app.candidate?.first_name || ''} ${app.candidate?.last_name || ''}`;
+    return fullName.toLowerCase().includes(search.toLowerCase()) || 
+           (app.title || app.job?.title || "").toLowerCase().includes(search.toLowerCase());
+  });
+
+  const handleViewProfile = (app: EmployerApplication) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const appAny = app as any;
+    const currId = appAny.application_id || appAny.id || appAny._id || "unknown";
     navigate(`/recruiter/candidates/${currId}`, { state: { initialApp: app } });
   };
 
   return (
-    <div className="p-8 max-w-7xl mx-auto w-full">
+    <div className="max-w-6xl mx-auto py-8 px-6 md:px-10 font-display text-slate-900">
+      {/* Header */}
       <div className="mb-8">
-        <h1 className="text-[28px] font-bold text-slate-900 mb-2 font-display tracking-tight">Quản lý Ứng viên</h1>
-        <p className="text-slate-600">Theo dõi và quản lý các hồ sơ ứng tuyển từ các tin tuyển dụng của bạn.</p>
+        <h1 className="text-3xl font-black tracking-tight text-slate-900">Quản lý ứng viên</h1>
+        <p className="text-slate-500 mt-1.5 text-sm">Theo dõi và quản lý các hồ sơ ứng tuyển từ các vị trí đang tuyển dụng.</p>
       </div>
 
-      {/* Tabs */}
-      <div className="bg-white border border-slate-200 rounded-xl p-1.5 flex items-center mb-6 overflow-x-auto gap-1">
-        {TABS.map((tab) => {
-          const isActive = activeTab === tab.id;
-          const count = tab.id !== "all" ? stats[tab.id] : null;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${
-                isActive 
-                  ? "bg-[#1e3fae] text-white shadow-sm" 
-                  : "text-slate-600 hover:bg-slate-50"
-              }`}
-            >
-              {tab.label} {count != null && `(${count})`}
-            </button>
-          );
-        })}
+      {/* Quick Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        {[
+          { label: "Tổng hồ sơ", value: applicants.length, icon: Users, color: "bg-blue-50 text-blue-600" },
+          { label: "Hồ sơ mới", value: stats.submitted || 0, icon: Clock, color: "bg-emerald-50 text-emerald-600" },
+          { label: "Phỏng vấn", value: stats.interview || 0, icon: Calendar, color: "bg-amber-50 text-amber-600" },
+          { label: "Đã tuyển", value: stats.accepted || 0, icon: CheckCircle, color: "bg-indigo-50 text-indigo-600" },
+        ].map((s, idx) => (
+          <div key={idx} className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+            <div className={`size-9 rounded-xl flex items-center justify-center mb-3 ${s.color}`}>
+              <s.icon className="w-4.5 h-4.5" />
+            </div>
+            <p className="text-2xl font-black text-slate-900">{s.value}</p>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">{s.label}</p>
+          </div>
+        ))}
       </div>
 
-      {/* Table */}
-      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+      {/* Main Container */}
+      <div className="bg-white rounded-[1.5rem] border border-slate-200 shadow-sm overflow-hidden">
+        {/* Toolbar */}
+        <div className="p-6 border-b border-slate-100 bg-slate-50/30 space-y-4">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="relative w-full md:max-w-sm">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Tìm tên ứng viên, vị trí..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full h-10 pl-10 pr-4 rounded-xl border border-slate-200 bg-white focus:ring-4 focus:ring-blue-100 focus:border-blue-400 outline-none text-sm transition-all"
+              />
+            </div>
+            <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-xl overflow-x-auto no-scrollbar">
+              {TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`px-4 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
+                    activeTab === tab.id
+                      ? "bg-white text-blue-700 shadow-sm"
+                      : "text-slate-500 hover:text-slate-800"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Table */}
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full border-collapse">
             <thead>
               <tr className="border-b border-slate-100">
-                <th className="py-4 px-6 text-xs font-bold text-slate-400 uppercase tracking-wider">Ứng viên</th>
-                <th className="py-4 px-6 text-xs font-bold text-slate-400 uppercase tracking-wider">Vị trí ứng tuyển</th>
-                <th className="py-4 px-6 text-xs font-bold text-slate-400 uppercase tracking-wider">Ngày nộp</th>
-                <th className="py-4 px-6 text-xs font-bold text-slate-400 uppercase tracking-wider">Trạng thái</th>
-                <th className="py-4 px-6 text-xs font-bold text-slate-400 uppercase tracking-wider">Thao tác</th>
+                <th className="py-4 px-6 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Ứng viên</th>
+                <th className="py-4 px-6 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Vị trí ứng tuyển</th>
+                <th className="py-4 px-6 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Ngày nộp</th>
+                <th className="py-4 px-6 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Trạng thái</th>
+                <th className="py-4 px-6 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="py-12 text-center text-slate-500">Đang tải dữ liệu...</td>
+                  <td colSpan={5} className="py-20 text-center">
+                    <div className="flex flex-col items-center gap-2">
+                      <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+                      <p className="text-sm font-bold text-slate-400">Đang tải...</p>
+                    </div>
+                  </td>
                 </tr>
-              ) : applicants.length === 0 ? (
+              ) : filteredApplicants.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-12 text-center text-slate-500">Không có ứng viên nào.</td>
+                  <td colSpan={5} className="py-20 text-center">
+                    <div className="flex flex-col items-center gap-2 opacity-40">
+                      <Users className="w-12 h-12 text-slate-300" />
+                      <p className="text-sm font-bold text-slate-400">Không có ứng viên nào</p>
+                    </div>
+                  </td>
                 </tr>
               ) : (
-                applicants.map((app) => {
-                  const statusConf = STATUS_CONFIG[app.status] || { label: app.status, classes: "bg-slate-100 text-slate-700" };
+                filteredApplicants.map((app) => {
+                  const status = STATUS_CONFIG[app.status] || { label: app.status, classes: "bg-slate-100 text-slate-600 border-slate-200", dot: "bg-slate-400" };
+                  const fullName = app.candidate?.full_name || `${app.candidate?.first_name || 'N'} ${app.candidate?.last_name || 'A'}`;
                   
-                  // Safe initial extract
-                  const candidateAny = app.candidate;
-                  const fullName = candidateAny?.full_name || `${candidateAny?.first_name || 'N'} ${candidateAny?.last_name || 'A'}`;
-                  const names = fullName.trim().split(" ");
-                  const initial = names[0] ? names[0].charAt(0) : "N";
-                  const lastNameInitial = names.length > 1 ? names[names.length - 1].charAt(0) : "";
-                  const avatarLetters = `${initial}${lastNameInitial}`.toUpperCase();
-
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  const appAny = app as any;
-                  const currId = appAny.application_id || appAny.id || appAny._id || "unknown";
-                  console.log("[CandidatesManager] currId:", currId);
                   return (
-                    <tr key={currId} className="hover:bg-slate-50/50 transition-colors">
+                    <tr key={app.application_id || app.id} className="group hover:bg-slate-50/50 transition-colors">
                       <td className="py-4 px-6">
                         <div className="flex items-center gap-3">
-                          <div className="size-10 rounded-full bg-slate-100 flex items-center justify-center border border-slate-200 flex-shrink-0 text-[#1e3fae] font-bold text-sm">
-                            {candidateAny?.avatar_url ? (
-                              <img src={candidateAny.avatar_url} alt="avatar" className="w-full h-full rounded-full object-cover" />
-                            ) : avatarLetters}
+                          <div className="size-11 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center flex-shrink-0">
+                            {app.candidate?.avatar_url ? (
+                              <img src={app.candidate.avatar_url} alt="" className="w-full h-full rounded-2xl object-cover" />
+                            ) : (
+                              <span className="text-blue-700 font-black text-sm">{fullName.charAt(0).toUpperCase()}</span>
+                            )}
                           </div>
-                          <div>
-                            <p className="font-bold text-slate-900 leading-tight">
-                              {fullName}
+                          <div className="min-w-0">
+                            <p className="font-bold text-slate-900 truncate group-hover:text-blue-700 transition-colors">{fullName}</p>
+                            <p className="text-[11px] text-slate-400 flex items-center gap-1">
+                              <Mail className="w-3 h-3" /> {app.candidate?.email}
                             </p>
-                            <p className="text-xs text-slate-500 mt-0.5">{candidateAny?.email}</p>
                           </div>
                         </div>
                       </td>
                       <td className="py-4 px-6">
-                        <span className="font-medium text-slate-700">{app.title || app.job?.title || "Không rõ vị trí"}</span>
+                        <div className="flex items-center gap-2 text-slate-700">
+                          <Briefcase className="w-3.5 h-3.5 text-slate-300" />
+                          <span className="text-sm font-semibold truncate">{app.title || app.job?.title || "Không rõ vị trí"}</span>
+                        </div>
+                      </td>
+                      <td className="py-4 px-6 text-sm text-slate-500 font-medium">
+                        {app.applied_at ? new Date(app.applied_at).toLocaleDateString('vi-VN') : "---"}
                       </td>
                       <td className="py-4 px-6">
-                        <span className="text-slate-500 text-sm">
-                          {app.applied_at ? new Date(app.applied_at).toLocaleDateString('vi-VN') : "12/10/2023"}
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[10px] font-black tracking-wider border ${status.classes}`}>
+                          <div className={`size-1.5 rounded-full ${status.dot}`} />
+                          {status.label}
                         </span>
                       </td>
-                      <td className="py-4 px-6">
-                        <span className={`px-2.5 py-1 text-[11px] font-bold rounded-lg uppercase tracking-wider ${statusConf.classes}`}>
-                          {statusConf.label}
-                        </span>
-                      </td>
-                      <td className="py-4 px-6">
+                      <td className="py-4 px-6 text-right">
                         <button 
-                          onClick={() => handleViewProfile(app, currId)}
-                          className="text-[#1e3fae] font-bold text-sm hover:underline"
+                          onClick={() => handleViewProfile(app)}
+                          className="inline-flex items-center gap-1.5 h-9 px-4 rounded-xl bg-white border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm"
                         >
-                          Xem hồ sơ
+                          Hồ sơ <ArrowUpRight className="w-3.5 h-3.5" />
                         </button>
                       </td>
                     </tr>
-                  )
+                  );
                 })
               )}
             </tbody>
           </table>
         </div>
 
-        {/* Pagination */}
-        {!loading && applicants.length > 0 && (
-          <div className="border-t border-slate-100 px-6 py-4 flex items-center justify-between">
-            <span className="text-sm text-slate-500">Hiển thị <strong className="text-slate-900">1-{applicants.length}</strong> của <strong className="text-slate-900">53</strong> ứng viên</span>
-            <div className="flex items-center gap-1.5">
-              <button className="size-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50">&lt;</button>
-              <button className="size-8 rounded-lg bg-[#1e3fae] text-white flex items-center justify-center font-medium">1</button>
-              <button className="size-8 rounded-lg border border-transparent hover:bg-slate-50 text-slate-700 flex items-center justify-center font-medium">2</button>
-              <button className="size-8 rounded-lg border border-transparent hover:bg-slate-50 text-slate-700 flex items-center justify-center font-medium">3</button>
-              <span className="text-slate-400">...</span>
-              <button className="size-8 rounded-lg border border-transparent hover:bg-slate-50 text-slate-700 flex items-center justify-center font-medium">11</button>
-              <button className="size-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50">&gt;</button>
+        {/* Footer */}
+        {!loading && filteredApplicants.length > 0 && (
+          <div className="p-4 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2">
+              {filteredApplicants.length} Ứng viên
+            </p>
+            <div className="flex gap-1">
+              <button className="size-8 rounded-lg border border-slate-200 bg-white text-slate-400 flex items-center justify-center hover:bg-slate-50">
+                <span className="material-symbols-outlined text-[18px]">chevron_left</span>
+              </button>
+              <button className="size-8 rounded-lg bg-blue-600 text-white font-bold text-xs">1</button>
+              <button className="size-8 rounded-lg border border-slate-200 bg-white text-slate-400 flex items-center justify-center hover:bg-slate-50">
+                <span className="material-symbols-outlined text-[18px]">chevron_right</span>
+              </button>
             </div>
           </div>
         )}

@@ -16,7 +16,8 @@ import CandidateProfile from "../pages/candidate/Profile";
 import RecommendedJobs from "../pages/candidate/RecommendedJobs";
 import ApplyJob from "../pages/candidate/ApplyJob";
 import JobDetail from "../pages/candidate/JobDetail";
-
+import MyApplications from "../pages/candidate/MyApplications";
+// import ApplicationDetailModal from "../pages/candidate/ApplicationDetailModal";
 // Recruiter Pages
 import RecruiterDashboard from "../pages/recruiter/Dashboard";
 import RecruiterCompanyProfile from "../pages/recruiter/CompanyProfile";
@@ -24,6 +25,7 @@ import RecruiterPostJob from "../pages/recruiter/PostJob";
 import RecruiterJobsManager from "../pages/recruiter/JobsManager";
 import RecruiterCandidatesManager from "../pages/recruiter/CandidatesManager";
 import RecruiterCandidateDetail from "../pages/recruiter/candidateDetail";
+import RecruiterJobDetail from "../pages/recruiter/JobDetail";
 
 // Admin Pages
 import AdminDashboard from "../pages/admin/Dashboard";
@@ -50,6 +52,7 @@ export default function AppRouter() {
           <Route path="recommended" element={<RecommendedJobs />} />
           <Route path="jobs/:jobId" element={<JobDetail />} />
           <Route path="apply/:jobId" element={<ApplyJob />} />
+          <Route path="applications" element={<MyApplications />} />
         </Route>
 
         {/* RECRUITER ROUTES */}
@@ -58,6 +61,7 @@ export default function AppRouter() {
           <Route path="company-profile" element={<RecruiterCompanyProfile />} />
           <Route path="post-job" element={<RecruiterPostJob />} />
           <Route path="jobs" element={<RecruiterJobsManager />} />
+          <Route path="jobs/:id" element={<RecruiterJobDetail />} />
           <Route path="candidates" element={<RecruiterCandidatesManager />} />
           <Route path="candidates/:applicationId" element={<RecruiterCandidateDetail />} />
         </Route>

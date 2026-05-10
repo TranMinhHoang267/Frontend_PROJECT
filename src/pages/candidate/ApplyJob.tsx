@@ -93,7 +93,7 @@ export default function ApplyJob() {
         resume_id: isNaN(Number(selectedCvId)) ? selectedCvId : Number(selectedCvId),
         cover_letter: coverLetter
       };
-      await applicationService.apply(payload as typeof payload & { job_id: number });
+      await applicationService.apply(payload as typeof payload & { job_id: string });
       alert("Nộp đơn thành công!");
       navigate('/candidate'); // Redirect to dashboard or application history
     } catch (err: unknown) {

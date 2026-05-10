@@ -51,8 +51,13 @@ export const jobService = {
     return res.data;
   },
 
-  getApplicants: async (jobId: number | string) => {
-    const res = await apiClient.get(`/employer/jobs/${jobId}/applicants`);
+  getApplicants: async (jobId: number | string, limit = 100) => {
+    const res = await apiClient.get(`/employer/jobs/${jobId}/applicants`, { params: { limit } });
+    return res.data;
+  },
+
+  deleteApplication: async (applicationId: number | string) => {
+    const res = await apiClient.delete(`/employer/applicants/${applicationId}`);
     return res.data;
   },
 

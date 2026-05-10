@@ -1,53 +1,53 @@
 import { apiClient } from '../config/axios';
 
 export interface Application {
-  id: number;
-  job_id: number;
-  resume_id?: number | null;
+  id: string;                    // ✅ UUID string, không phải number
   cover_letter?: string | null;
   note_by_recruiter?: string | null;
-  status: 'submitted' | 'reviewing' | 'interviewing' | 'offered' | 'rejected' | 'withdrawn';
-  createdAt: string;
-  updatedAt: string;
+  cv_url?: string | null;
+  status: 'submitted' | 'under_review' | 'interview' | 'accepted' | 'rejected';
+  applied_at: string;            
+  updatedAt?: string;
   job?: {
-    id: number;
+    id: string;                  //   ✅ UUID string
     title: string;
     location: string | null;
+    job_type?: string | null;
+    salary_min?: number | null;
+    salary_max?: number | null;
+    deadline?: string | null;
     company?: {
       name: string;
       logo_url?: string | null;
     };
   };
-  journey?: {
-    step: 'applied' | 'review' | 'interview' | 'decision';
-    status: 'completed' | 'in_progress' | 'upcoming';
-    date?: string;
-  }[];
 }
 
 export const applicationService = {
-  // POST /api/applications
-  apply: async (data: { job_id: number; resume_id?: number; cover_letter?: string }) => {
+  apply: async (data: { job_id: string; cover_letter?: string }) => {
     const res = await apiClient.post('/applications', data);
     return res.data;
   },
 
-  // GET /api/applications
-  getApplications: async () => {
+  getApplications: async (): Promise<Application[]> => {
     const res = await apiClient.get('/applications');
-    // Giả sử API trả về { status: "success", data: Application[] } hoặc Application[] trực tiếp
-    return res.data?.data ?? res.data ?? [];
+    const raw = res.data;
+
+    // API trả về: { status, data: { total_items, total_pages, current_page, applications[] } }
+    if (Array.isArray(raw?.data?.applications)) return raw.data.applications;
+    if (Array.isArray(raw?.data))               return raw.data;
+    if (Array.isArray(raw?.applications))       return raw.applications;
+    if (Array.isArray(raw))                     return raw;
+    return [];
   },
 
-  // GET /api/applications/:id
-  getApplicationDetail: async (id: number | string) => {
+  getApplicationDetail: async (id: string) => {
     const res = await apiClient.get(`/applications/${id}`);
     return res.data?.data ?? res.data;
   },
 
-  // DELETE /api/applications/:id
-  withdrawApplication: async (id: number | string) => {
+  withdrawApplication: async (id: string) => {
     const res = await apiClient.delete(`/applications/${id}`);
     return res.data;
-  }
+  },
 };

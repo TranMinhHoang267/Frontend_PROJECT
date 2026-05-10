@@ -1,13 +1,15 @@
 import { useState, useEffect } from "react";
-import { Loader2, Users, Eye, PauseCircle, PlayCircle, ChevronRight, Search } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Loader2, Users, Eye, PauseCircle, PlayCircle, ChevronRight, Search, Trash2 } from "lucide-react";
 import { jobService } from "../../services/job.service";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 interface Applicant {
-  id: number;
+  id: number;           // application_id
   full_name: string;
   email: string;
-  createdAt: string;
+  applied_at: string;
+  status: string;
 }
 
 interface JobWithApplicants {
@@ -28,8 +30,11 @@ interface JobWithApplicants {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const formatSalary = (min: number | null, max: number | null) => {
   if (!min && !max) return "Thỏa thuận";
-  const fmt = (n: number) =>
-    n >= 1_000_000 ? `${(n / 1_000_000).toFixed(0)}tr` : String(n);
+  const fmt = (n: number) => {
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(0)}tr`;
+    if (n >= 1_000) return `${(n / 1_000).toFixed(0)}N`;
+    return String(n);
+  };
   if (min && max) return `${fmt(min)} – ${fmt(max)} VND`;
   if (min) return `Từ ${fmt(min)} VND`;
   return `Đến ${fmt(max!)} VND`;
@@ -60,11 +65,15 @@ const ApplicantDrawer = ({
   applicants,
   loading,
   onClose,
+  onDeleteApp,
+  onViewApp,
 }: {
   job: JobWithApplicants;
   applicants: Applicant[];
   loading: boolean;
   onClose: () => void;
+  onDeleteApp: (id: number) => void;
+  onViewApp: (id: number) => void;
 }) => (
   <div className="fixed inset-0 z-50 flex justify-end" onClick={onClose}>
     <div className="absolute inset-0 bg-black/20 backdrop-blur-[2px]" />
@@ -112,7 +121,11 @@ const ApplicantDrawer = ({
           </div>
         ) : (
           applicants.map((ap, i) => (
-            <div key={ap.id} className="flex items-center gap-3 p-4 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer border border-slate-100">
+            <div 
+              key={ap.id} 
+              onClick={() => onViewApp(ap.id)}
+              className="group flex items-center gap-3 p-4 rounded-xl bg-slate-50 hover:bg-white hover:shadow-md hover:border-blue-200 transition-all cursor-pointer border border-slate-100 relative"
+            >
               <div className="size-10 rounded-full bg-[#1e3fae]/10 text-[#1e3fae] flex items-center justify-center font-bold text-sm flex-shrink-0">
                 {ap.full_name?.charAt(0)?.toUpperCase() ?? String(i + 1)}
               </div>
@@ -120,12 +133,22 @@ const ApplicantDrawer = ({
                 <p className="font-bold text-sm text-slate-800 truncate">{ap.full_name}</p>
                 <p className="text-xs text-slate-500 truncate">{ap.email}</p>
               </div>
-              <div className="text-right flex-shrink-0">
+              <div className="text-right flex-shrink-0 mr-2">
                 <span className="text-[10px] font-semibold text-slate-400">
-                  {new Date(ap.createdAt).toLocaleDateString("vi-VN")}
+                  {ap.applied_at ? new Date(ap.applied_at).toLocaleDateString("vi-VN") : ""}
                 </span>
               </div>
-              <ChevronRight className="w-4 h-4 text-slate-300 flex-shrink-0" />
+              
+              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                 <button 
+                  onClick={(e) => { e.stopPropagation(); onDeleteApp(ap.id); }}
+                  className="size-8 flex items-center justify-center rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all"
+                  title="Xóa hồ sơ này"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+                <ChevronRight className="w-4 h-4 text-slate-300" />
+              </div>
             </div>
           ))
         )}
@@ -136,6 +159,7 @@ const ApplicantDrawer = ({
 
 // ══════════════════════════════════════════════════════════════════════════════
 export default function JobsManager() {
+  const navigate = useNavigate();
   const [jobs, setJobs] = useState<JobWithApplicants[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -153,7 +177,7 @@ export default function JobsManager() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  // Load approved + paused jobs
+  // Load approved + paused jobs, then fetch applicant counts in parallel
   useEffect(() => {
     const loadJobs = async () => {
       setLoading(true);
@@ -164,7 +188,29 @@ export default function JobsManager() {
         ]);
         const approvedJobsRaw = approvedRes.data?.jobs ?? approvedRes.jobs ?? [];
         const pausedJobsRaw = pausedRes.data?.jobs ?? pausedRes.jobs ?? [];
-        setJobs([...approvedJobsRaw, ...pausedJobsRaw]);
+        const allJobs: JobWithApplicants[] = [...approvedJobsRaw, ...pausedJobsRaw];
+
+        // Fetch applicant counts for each job in parallel
+        const countResults = await Promise.allSettled(
+          allJobs.map(j => jobService.getApplicants(j.id))
+        );
+
+        const jobsWithCounts = allJobs.map((j, idx) => {
+          const result = countResults[idx];
+          if (result.status === "fulfilled") {
+            const val = result.value;
+            // Shape A (after server restart): { status, count, data: [...] }
+            // Shape B (current):              { status, data: { total_items, applications: [...] } }
+            const cnt =
+              val?.count
+              ?? val?.data?.total_items
+              ?? (Array.isArray(val?.data) ? val.data.length : (val?.data?.applications?.length ?? 0));
+            return { ...j, applicantCount: Number(cnt) };
+          }
+          return { ...j, applicantCount: 0 };
+        });
+
+        setJobs(jobsWithCounts);
       } catch {
         showToast("err", "Không thể tải danh sách công việc.");
       } finally {
@@ -181,11 +227,45 @@ export default function JobsManager() {
     setLoadingApplicants(true);
     try {
       const res = await jobService.getApplicants(job.id);
-      setApplicants(res.data ?? res ?? []);
+      // Shape A: { status, count, data: [...] }
+      // Shape B: { status, data: { total_items, applications: [...] } }
+      const rawArr =
+        Array.isArray(res?.data) ? res.data
+        : Array.isArray(res?.data?.applications) ? res.data.applications
+        : [];
+      type RawApp = { application_id: number; status: string; applied_at: string; candidate?: { full_name?: string; email?: string } };
+      const mapped: Applicant[] = (rawArr as RawApp[]).map(item => ({
+        id:         item.application_id,
+        full_name:  item.candidate?.full_name ?? "Ứng viên",
+        email:      item.candidate?.email ?? "",
+        applied_at: item.applied_at,
+        status:     item.status,
+      }));
+      setApplicants(mapped);
     } catch {
       setApplicants([]);
     } finally {
       setLoadingApplicants(false);
+    }
+  };
+
+  // Delete applicant — also decrement count on job card
+  const handleDeleteApp = async (appId: number) => {
+    if (!window.confirm("Bạn có chắc chắn muốn xóa hồ sơ ứng tuyển này? Hành động này không thể hoàn tác.")) return;
+    try {
+      await jobService.deleteApplication(appId);
+      setApplicants(prev => prev.filter(a => a.id !== appId));
+      // Update count on parent job card
+      if (selectedJob) {
+        setJobs(prev => prev.map(j =>
+          j.id === selectedJob.id
+            ? { ...j, applicantCount: Math.max(0, (j.applicantCount ?? 1) - 1) }
+            : j
+        ));
+      }
+      showToast("ok", "Đã xóa hồ sơ ứng tuyển.");
+    } catch {
+      showToast("err", "Không thể xóa hồ sơ.");
     }
   };
 
@@ -200,6 +280,20 @@ export default function JobsManager() {
       showToast("err", "Không thể thay đổi trạng thái.");
     } finally {
       setTogglingId(null);
+    }
+  };
+
+  // Delete job — also removes it from the count total
+  const handleDelete = async (id: number) => {
+    if (!window.confirm("Bạn có chắc chắn muốn xóa tin tuyển dụng này? Tất cả hồ sơ ứng tuyển liên quan cũng sẽ bị xóa.")) {
+      return;
+    }
+    try {
+      await jobService.deleteJob(id);
+      setJobs(j => j.filter(x => x.id !== id));
+      showToast("ok", "Đã xóa tin tuyển dụng thành công.");
+    } catch {
+      showToast("err", "Không thể xóa tin tuyển dụng.");
     }
   };
 
@@ -225,6 +319,8 @@ export default function JobsManager() {
           applicants={applicants}
           loading={loadingApplicants}
           onClose={() => setSelectedJob(null)}
+          onDeleteApp={handleDeleteApp}
+          onViewApp={(id) => navigate(`/recruiter/candidates/${id}`)}
         />
       )}
 
@@ -245,7 +341,7 @@ export default function JobsManager() {
           { label: "Tổng tin đăng", value: jobs.length, icon: "work", color: "bg-blue-50 text-[#1e3fae]" },
           { label: "Đang hoạt động", value: jobs.filter(j => j.status === "approved").length, icon: "check_circle", color: "bg-green-50 text-green-600" },
           { label: "Tạm dừng", value: jobs.filter(j => j.status === "paused").length, icon: "pause_circle", color: "bg-amber-50 text-amber-600" },
-          { label: "Tổng ứng viên", value: "—", icon: "group", color: "bg-indigo-50 text-indigo-600" },
+          { label: "Tổng ứng viên", value: jobs.reduce((sum, j) => sum + (j.applicantCount || 0), 0), icon: "group", color: "bg-indigo-50 text-indigo-600" },
         ].map(s => (
           <div key={s.label} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex items-center gap-4">
             <div className={`size-10 rounded-xl flex items-center justify-center flex-shrink-0 ${s.color}`}>
@@ -338,12 +434,13 @@ export default function JobsManager() {
                   className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-50 text-[#1e3fae] hover:bg-[#1e3fae] hover:text-white transition-all border border-blue-100 hover:border-transparent font-semibold text-sm flex-shrink-0"
                 >
                   <Users className="w-4 h-4" />
-                  Xem ứng viên
+                  Xem ứng viên ({job.applicantCount ?? 0})
                 </button>
 
                 {/* Actions */}
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <button
+                    onClick={() => navigate(`/recruiter/jobs/${job.id}`)}
                     className="flex items-center gap-1.5 h-9 px-4 rounded-xl border border-slate-200 text-slate-600 text-xs font-semibold hover:bg-slate-50 transition-colors"
                   >
                     <Eye className="w-3.5 h-3.5" /> Chi tiết
@@ -361,6 +458,13 @@ export default function JobsManager() {
                     ) : (
                       <PauseCircle className="w-4 h-4" />
                     )}
+                  </button>
+                  <button
+                    onClick={() => handleDelete(job.id)}
+                    title="Xóa tin đăng"
+                    className="size-9 flex items-center justify-center rounded-xl border border-slate-200 text-slate-400 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
               </div>
