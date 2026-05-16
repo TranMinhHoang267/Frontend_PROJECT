@@ -3,24 +3,24 @@ import { apiClient } from '../config/axios';
 // ---- Education ----
 export interface Education {
   id?: string;
-  school_name: string;  // API field
+  school: string;
   degree: string;
-  start_date: string;   // "YYYY-MM-DD"
-  end_date?: string | null;
-  description?: string;
+  field?: string | null;
+  startDate: string;
+  endDate?: string | null;
 }
 
 // ---- Experience ----
 export interface Experience {
   id?: string;
-  company_name: string; // API field
-  position: string;
-  start_date: string;   // "YYYY-MM-DD"
-  end_date?: string | null;
+  company: string;    // Khớp Prisma
+  title: string;      // Khớp Prisma ('title' thay vì 'position')
+  startDate: string;  // Khớp Prisma
+  endDate?: string | null;
   description?: string;
 }
 
-// ---- Skill (API uses array of strings) ----
+// ---- Skill ----
 export interface Skill {
   id?: string;
   name: string;
@@ -61,10 +61,9 @@ export const portfolioService = {
     await apiClient.delete(`/portfolio/experiences/${id}`);
   },
 
-  // ----- SKILLS (API nhận mảng chuỗi) -----
+  // ----- SKILLS -----
   getSkills: async (): Promise<Skill[]> => {
     const res = await apiClient.get('/portfolio/skills');
-    // Backend trả về mảng tên hoặc mảng object
     const raw = res.data?.data ?? res.data ?? [];
     if (typeof raw[0] === 'string') {
       return raw.map((name: string, i: number) => ({ id: String(i), name }));
@@ -72,7 +71,6 @@ export const portfolioService = {
     return raw;
   },
   updateSkills: async (skills: string[]): Promise<Skill[]> => {
-    // PUT { "skills": ["Python","Java","MySQL"] }
     const res = await apiClient.put('/portfolio/skills', { skills });
     const raw = res.data?.data ?? res.data ?? [];
     if (typeof raw[0] === 'string') {

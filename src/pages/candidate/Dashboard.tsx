@@ -8,22 +8,24 @@ import {
   CheckCircle2,
   Loader2,
   Building2,
+  ArrowRight,
 } from "lucide-react";
 import { useAuthStore } from "../../stores/authStore";
 import { applicationService } from "../../services/application.service";
 import type { Application } from "../../services/application.service";
 import { employerService } from "../../services/employer.service";
+import ApplicationDetailModal from "./ApplicationDetailModal";
 
 // ─── 5 trạng thái hợp lệ theo backend ───────────────────────────────────────
 // VALID: submitted | under_review | interview | accepted | rejected
 type JourneyStep = "applied" | "review" | "interview" | "decision";
 
 const STATUS_LABEL: Record<string, string> = {
-  submitted:    "Submitted",
-  under_review: "Under Review",
-  interview:    "Interviewing",
-  accepted:     "Accepted",
-  rejected:     "Rejected",
+  submitted:    "Đã nộp",
+  under_review: "Đang xem xét",
+  interview:    "Đang phỏng vấn",
+  accepted:     "Đã trúng tuyển",
+  rejected:     "Đã từ chối",
 };
 
 const STATUS_STYLE: Record<string, string> = {
@@ -79,29 +81,47 @@ function CompanyLogo({ logo, name }: { logo?: string | null; name?: string }) {
 export default function CandidateDashboard() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
-  const firstName = user?.fullName?.split(" ").slice(-1)[0] || "Alex";
+  const firstName = user?.fullName?.split(" ").slice(-1)[0] || "Bạn";
 
   const [apps, setApps] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
-  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
+  
+  // Modal state
+  const [detailModalId, setDetailModalId] = useState<string | null>(null);
+
+  const fetchApps = async () => {
+    setLoading(true);
+    try {
+      const data = await applicationService.getApplications();
+      const list = (Array.isArray(data) ? data : []) as Application[];
+      setApps(list);
+      if (list.length > 0) setSelectedApp(list[0]);
+    } catch (e) {
+      console.error("Dashboard load error:", e);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    (async () => {
-      setLoading(true);
-      try {
-        const data = await applicationService.getApplications();
-        const list = (Array.isArray(data) ? data : []) as Application[];
-        setApps(list);
-        if (list.length > 0) setSelectedApp(list[0]);
-      } catch (e) {
-        console.error("Dashboard load error:", e);
-      } finally {
-        setLoading(false);
-      }
-    })();
+    fetchApps();
   }, []);
+
+  const handleDeleteRejected = async (id: string) => {
+    if (!window.confirm("Bạn có chắc chắn muốn xóa đơn ứng tuyển đã bị từ chối này không?")) return;
+    try {
+      await applicationService.deleteRejectedApplication(id);
+      // Refresh list
+      fetchApps();
+      setOpenMenuId(null);
+    } catch (error) {
+      console.error("Lỗi khi xóa đơn ứng tuyển:", error);
+      alert("Không thể xóa đơn ứng tuyển. Vui lòng thử lại sau.");
+    }
+  };
 
   // Stats
   const totalApps   = apps.length;
@@ -109,27 +129,27 @@ export default function CandidateDashboard() {
 
   const stats = [
     {
-      label: "Total Applications",
+      label: "Tổng đơn ứng tuyển",
       value: totalApps,
-      sub: `+${Math.min(totalApps, 2)} this week`,
+      sub: `+${Math.min(totalApps, 2)} tuần này`,
       subColor: "text-emerald-500",
       Icon: FileText,
       iconBg: "bg-blue-50",
       iconColor: "text-[#1e3fae]",
     },
     {
-      label: "Active Interviews",
+      label: "Đang phỏng vấn",
       value: activeIntvw,
-      sub: activeIntvw > 0 ? "Next: Tomorrow" : "No upcoming",
+      sub: activeIntvw > 0 ? "Tiếp theo: Ngày mai" : "Không có lịch",
       subColor: "text-slate-400",
       Icon: MessageSquare,
       iconBg: "bg-violet-50",
       iconColor: "text-violet-500",
     },
     {
-      label: "Bookmarked Jobs",
+      label: "Việc làm đã lưu",
       value: 0,
-      sub: "Updated 2h ago",
+      sub: "Cập nhật 2 giờ trước",
       subColor: "text-slate-400",
       Icon: Bookmark,
       iconBg: "bg-orange-50",
@@ -138,10 +158,10 @@ export default function CandidateDashboard() {
   ];
 
   const JOURNEY_STEPS: { step: JourneyStep; label: string }[] = [
-    { step: "applied",   label: "Applied" },
-    { step: "review",    label: "Review" },
-    { step: "interview", label: "Interview" },
-    { step: "decision",  label: "Decision" },
+    { step: "applied",   label: "Đã nộp" },
+    { step: "review",    label: "Xem xét" },
+    { step: "interview", label: "Phỏng vấn" },
+    { step: "decision",  label: "Kết quả" },
   ];
 
   return (
@@ -149,10 +169,10 @@ export default function CandidateDashboard() {
       {/* ── Header ── */}
       <div>
         <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-          Candidate Dashboard
+          Bảng điều khiển Ứng viên
         </h1>
         <p className="text-slate-500 text-sm mt-1">
-          Welcome back, {firstName}. Here's your application status overview.
+          Chào mừng trở lại, {firstName}. Dưới đây là tổng quan trạng thái ứng tuyển của bạn.
         </p>
       </div>
 
@@ -188,13 +208,13 @@ export default function CandidateDashboard() {
           {/* ── Recent Applications ── */}
           <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
             <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
-              <h2 className="text-lg font-black text-slate-900">Recent Applications</h2>
+              <h2 className="text-lg font-black text-slate-900">Đơn ứng tuyển gần đây</h2>
               {apps.length > 5 && (
                 <button
                   onClick={() => setShowAll((v) => !v)}
                   className="text-sm font-bold text-[#1e3fae] hover:underline"
                 >
-                  {showAll ? "Thu gọn" : `View All (${apps.length})`}
+                  {showAll ? "Thu gọn" : `Xem tất cả (${apps.length})`}
                 </button>
               )}
             </div>
@@ -210,21 +230,21 @@ export default function CandidateDashboard() {
                   <thead className="bg-[#f8fafc] border-b border-slate-100">
                     <tr>
                       <th className="px-6 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                        Company &amp; Job
+                        Công ty &amp; Công việc
                       </th>
                       <th className="px-6 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                        Date Applied
+                        Ngày nộp
                       </th>
                       <th className="px-6 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                        Status
+                        Trạng thái
                       </th>
                       <th className="px-6 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                        Action
+                        Thao tác
                       </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {apps.slice(0, 5).map((app) => (
+                    {apps.slice(0, showAll ? apps.length : 5).map((app) => (
                       <tr
                         key={app.id}
                         onClick={() => { setSelectedApp(app); setOpenMenuId(null); }}
@@ -262,11 +282,11 @@ export default function CandidateDashboard() {
 
                         {/* Date */}
                         <td className="px-6 py-4 text-slate-500 font-medium whitespace-nowrap">
-                          {new Date(app.createdAt).toLocaleDateString("en-US", {
-                            month: "short",
+                          {app.applied_at ? new Date(app.applied_at).toLocaleDateString("vi-VN", {
                             day: "2-digit",
+                            month: "short",
                             year: "numeric",
-                          })}
+                          }) : "—"}
                         </td>
 
                         {/* Status badge */}
@@ -293,7 +313,7 @@ export default function CandidateDashboard() {
                               <MoreVertical className="w-4 h-4" />
                             </button>
                             {openMenuId === app.id && (
-                              <div className="absolute right-0 top-full mt-1 w-40 bg-white border border-slate-200 rounded-xl shadow-xl z-20 py-1 text-sm">
+                              <div className="absolute right-0 top-full mt-1 w-44 bg-white border border-slate-200 rounded-xl shadow-xl z-20 py-1 text-sm">
                                 <button
                                   onClick={() => {
                                     setSelectedApp(app);
@@ -303,15 +323,23 @@ export default function CandidateDashboard() {
                                 >
                                   Xem hành trình
                                 </button>
-                                {app.job?.id && (
+                                {app.id && (
                                   <button
                                     onClick={() => {
-                                      navigate(`/candidate/jobs/${app.job!.id}`);
+                                      setDetailModalId(app.id);
                                       setOpenMenuId(null);
                                     }}
                                     className="flex items-center gap-2 w-full px-3 py-2 text-slate-700 hover:bg-slate-50"
                                   >
-                                    Xem việc làm
+                                    Xem chi tiết đơn tuyển
+                                  </button>
+                                )}
+                                {app.status === "rejected" && (
+                                  <button
+                                    onClick={() => handleDeleteRejected(app.id)}
+                                    className="flex items-center gap-2 w-full px-3 py-2 text-red-600 hover:bg-red-50 border-t border-slate-50 mt-1"
+                                  >
+                                    Xóa đơn bị từ chối
                                   </button>
                                 )}
                               </div>
@@ -328,27 +356,56 @@ export default function CandidateDashboard() {
 
           {/* ── Selected Application Journey ── */}
           {selectedApp && (
-            <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8">
+            <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm">
               {/* Label */}
-              <p className="text-[10px] font-bold text-[#1e3fae] uppercase tracking-widest mb-2">
-                Selected Application Journey
-              </p>
+              <div className="flex items-center gap-2 mb-6">
+                <div className="size-2 bg-[#1e3fae] rounded-full animate-pulse" />
+                <p className="text-[11px] font-bold text-[#1e3fae] uppercase tracking-widest">
+                  Hành trình ứng tuyển đã chọn
+                </p>
+              </div>
 
               {/* Title row */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-10">
-                <h2 className="text-xl font-black text-slate-900 leading-tight">
-                  {selectedApp.job?.title}
-                  {selectedApp.job?.company?.name && (
-                    <span className="font-semibold text-slate-500">
-                      {" "}at {selectedApp.job.company.name}
-                    </span>
-                  )}
-                </h2>
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
+                <div className="flex items-center gap-4">
+                  {/* Company Logo in Header */}
+                  <div className="size-14 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center overflow-hidden p-2 flex-shrink-0 shadow-sm">
+                    <CompanyLogo
+                      logo={selectedApp.job?.company?.logo_url}
+                      name={selectedApp.job?.company?.name}
+                    />
+                  </div>
+                  <div>
+                    <div className="flex items-center flex-wrap gap-x-2 gap-y-1">
+                      <h2 className="text-2xl font-black text-slate-900 leading-none">
+                        {selectedApp.job?.title}
+                      </h2>
+                      {selectedApp.job?.company?.name && (
+                        <div className="flex items-center gap-2 text-slate-400">
+                          <ArrowRight className="w-5 h-5 text-slate-300" />
+                          <span className="text-lg font-bold text-slate-500">
+                            {selectedApp.job.company.name}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 mt-2">
+                      <span className={`px-2.5 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider ${STATUS_STYLE[selectedApp.status]}`}>
+                        {STATUS_LABEL[selectedApp.status]}
+                      </span>
+                      <span className="text-[11px] text-slate-400 font-medium">
+                        Cập nhật: {new Date(selectedApp.updatedAt || selectedApp.applied_at || Date.now()).toLocaleDateString("vi-VN")}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                
                 <button
                   onClick={() => navigate("/candidate/applications")}
-                  className="flex-shrink-0 px-5 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-bold hover:bg-slate-700 transition-colors"
+                  className="flex-shrink-0 px-6 py-3 rounded-xl bg-[#1e3fae] text-white text-sm font-bold hover:bg-[#1e3fae]/90 transition-all shadow-lg shadow-blue-100 flex items-center justify-center gap-2"
                 >
-                  Manage Interview
+                  <FileText className="w-4 h-4" />
+                  {selectedApp.status === 'interview' ? "Quản lý phỏng vấn" : "Tất cả đơn tuyển"}
                 </button>
               </div>
 
@@ -371,28 +428,40 @@ export default function CandidateDashboard() {
                 <div className="flex justify-between relative z-10">
                   {JOURNEY_STEPS.map(({ step, label }) => {
                     const state = getStepState(step, selectedApp.status);
-                    const dateStr =
-                      step === "applied"
-                        ? new Date(selectedApp.createdAt).toLocaleDateString("en-US", {
-                            month: "short",
+                    const isDecision = step === "decision";
+                    const isRejected = selectedApp.status === "rejected";
+                    const isAccepted = selectedApp.status === "accepted";
+
+                    let dateStr = "Sắp tới";
+                    if (step === "applied") {
+                      dateStr = selectedApp.applied_at
+                        ? new Date(selectedApp.applied_at).toLocaleDateString("vi-VN", {
                             day: "2-digit",
+                            month: "short",
                           })
-                        : state === "active"
-                        ? "In Progress"
-                        : state === "completed"
-                        ? "Done"
-                        : "Upcoming";
+                        : "—";
+                    } else if (state === "active") {
+                      dateStr = isDecision 
+                        ? (isRejected ? "Đã từ chối" : isAccepted ? "Trúng tuyển" : "Đang xử lý")
+                        : "Đang xử lý";
+                    } else if (state === "completed") {
+                      dateStr = "Hoàn thành";
+                    }
 
                     return (
                       <div key={step} className="flex flex-col items-center flex-1">
                         {/* Node */}
-                        {state === "completed" ? (
+                        {isDecision && isRejected ? (
+                          <div className="size-9 rounded-full bg-red-500 flex items-center justify-center mb-3 shadow-sm">
+                            <span className="material-symbols-outlined text-[18px] text-white">close</span>
+                          </div>
+                        ) : state === "completed" ? (
                           <div className="size-9 rounded-full bg-[#1e3fae] flex items-center justify-center mb-3 shadow-sm">
                             <CheckCircle2 className="w-4 h-4 text-white" />
                           </div>
                         ) : state === "active" ? (
-                          <div className="size-9 rounded-full border-4 border-[#1e3fae] bg-white flex items-center justify-center mb-3 shadow-md">
-                            <div className="size-3 bg-[#1e3fae] rounded-full animate-pulse" />
+                          <div className={`size-9 rounded-full border-4 ${isDecision && isAccepted ? "border-emerald-500" : "border-[#1e3fae]"} bg-white flex items-center justify-center mb-3 shadow-md`}>
+                            <div className={`size-3 ${isDecision && isAccepted ? "bg-emerald-500" : "bg-[#1e3fae]"} rounded-full animate-pulse`} />
                           </div>
                         ) : (
                           <div className="size-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center mb-3" />
@@ -401,18 +470,22 @@ export default function CandidateDashboard() {
                         {/* Label */}
                         <p
                           className={`text-xs font-bold ${
-                            state === "upcoming"
+                            isDecision && isRejected
+                              ? "text-red-500"
+                              : isDecision && isAccepted && state === "active"
+                              ? "text-emerald-600"
+                              : state === "upcoming"
                               ? "text-slate-400"
                               : state === "active"
                               ? "text-[#1e3fae]"
                               : "text-slate-900"
                           }`}
                         >
-                          {label}
+                          {isDecision && isRejected ? "Từ chối" : isDecision && isAccepted ? "Trúng tuyển" : label}
                         </p>
                         <p
                           className={`text-[10px] font-medium mt-0.5 ${
-                            state === "active" ? "text-[#1e3fae]/70" : "text-slate-400"
+                            isDecision && isRejected ? "text-red-400" : state === "active" ? "text-[#1e3fae]/70" : "text-slate-400"
                           }`}
                         >
                           {dateStr}
@@ -428,7 +501,7 @@ export default function CandidateDashboard() {
                 <div className="mt-8 p-4 bg-red-50 border border-red-100 rounded-xl relative overflow-hidden">
                   <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-400 rounded-l-xl" />
                   <h3 className="text-sm font-bold text-red-800 mb-1 pl-2">
-                    Feedback from Employer
+                    Phản hồi từ Nhà tuyển dụng
                   </h3>
                   <p className="text-sm text-red-600 pl-2">
                     {selectedApp.note_by_recruiter}
@@ -438,6 +511,14 @@ export default function CandidateDashboard() {
             </div>
           )}
         </>
+      )}
+
+      {/* Detail Modal */}
+      {detailModalId && (
+        <ApplicationDetailModal
+          applicationId={detailModalId}
+          onClose={() => setDetailModalId(null)}
+        />
       )}
     </div>
   );

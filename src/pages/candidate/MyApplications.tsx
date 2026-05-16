@@ -3,7 +3,7 @@ import {
   Briefcase, MapPin, Calendar, Clock, Search,
   ChevronLeft, ChevronRight, RefreshCw, Eye, Trash2,
   FileText, CheckCircle2, XCircle, AlertCircle, Send,
-  Users, Building2,
+  Users, Building2, Banknote,
 } from "lucide-react";
 import { applicationService, type Application } from "../../services/application.service";
 import { employerService } from "../../services/employer.service";
@@ -57,82 +57,97 @@ function CompanyLogo({ logo, name }: { logo?: string | null; name?: string }) {
   return <span className="text-[#1e3fae] font-black text-lg">{name?.charAt(0)?.toUpperCase() || "?"}</span>;
 }
 
-function ApplicationCard({ app, onWithdraw, onViewDetail }: {
+const formatSalary = (min: number | null, max: number | null) => {
+  if (!min && !max) return "Thỏa thuận";
+  const fmt = (n: number) => {
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(0)}tr`;
+    if (n >= 1_000) return `${(n / 1_000).toFixed(0)}N`;
+    return String(n);
+  };
+  if (min && max) return `${fmt(min)} – ${fmt(max)} VND`;
+  if (min) return `Từ ${fmt(min)} VND`;
+  return `Đến ${fmt(max!)} VND`;
+};
+
+function ApplicationCard({ app, onWithdraw, onDeleteRejected, onViewDetail }: {
   app: Application;
   onWithdraw: (id: string) => void;
+  onDeleteRejected: (id: string) => void;
   onViewDetail: (id: string) => void;
 }) {
   return (
-    <div className="group bg-white border border-slate-200 rounded-2xl p-5 hover:border-[#1e3fae]/30 hover:shadow-md transition-all duration-200 flex flex-col gap-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-4 min-w-0">
-          <div className="size-14 rounded-xl border border-slate-100 bg-white shadow-sm flex items-center justify-center flex-shrink-0 overflow-hidden p-1.5">
+    <div className="group bg-white border border-slate-200 rounded-2xl p-4 hover:border-[#1e3fae]/30 hover:shadow-sm transition-all duration-200 flex flex-col gap-4">
+      <div className="flex items-center gap-4">
+        {/* Cột trái: Logo + Thông tin chính */}
+        <div className="flex items-center gap-4 flex-1 min-w-0">
+          <div className="size-12 rounded-xl border border-slate-100 bg-white shadow-sm flex items-center justify-center flex-shrink-0 overflow-hidden p-1">
             <CompanyLogo logo={app.job?.company?.logo_url} name={app.job?.company?.name} />
           </div>
-          <div className="min-w-0">
-            <h3 className="font-bold text-slate-900 text-base leading-snug truncate">{app.job?.title || "Vị trí không xác định"}</h3>
-            <div className="flex items-center gap-1.5 mt-1 text-slate-500 text-sm">
-              <Building2 className="w-3.5 h-3.5 flex-shrink-0" />
-              <span className="truncate">{app.job?.company?.name || "Công ty"}</span>
-            </div>
-            {app.job?.location && (
-              <div className="flex items-center gap-1.5 mt-0.5 text-slate-400 text-xs">
-                <MapPin className="w-3 h-3 flex-shrink-0" />
-                <span className="truncate">{app.job.location}</span>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-3">
+              <h3 className="font-bold text-slate-900 text-sm leading-snug truncate group-hover:text-[#1e3fae] transition-colors max-w-[70%]">
+                {app.job?.title || "Vị trí không xác định"}
+              </h3>
+              <div className="flex-shrink-0">
+                <StatusBadge status={app.status} />
               </div>
-            )}
+            </div>
+            
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1 text-[11px] text-slate-500">
+              <div className="flex items-center gap-1">
+                <Building2 className="w-3 h-3 flex-shrink-0" />
+                <span className="truncate font-medium">{app.job?.company?.name || "Công ty"}</span>
+              </div>
+              <div className="flex items-center gap-1 border-l border-slate-200 pl-3 text-emerald-600 font-bold">
+                <Banknote className="w-3 h-3 flex-shrink-0" />
+                <span>{formatSalary(app.job?.salary_min ?? null, app.job?.salary_max ?? null)}</span>
+              </div>
+              {app.job?.location && (
+                <div className="flex items-center gap-1 border-l border-slate-200 pl-3">
+                  <MapPin className="w-3 h-3 flex-shrink-0" />
+                  <span className="truncate">{app.job.location}</span>
+                </div>
+              )}
+              <div className="flex items-center gap-1 border-l border-slate-200 pl-3">
+                <Calendar className="w-3 h-3 flex-shrink-0" />
+                <span>Nộp {formatRelativeTime(app.applied_at)}</span>
+              </div>
+            </div>
           </div>
         </div>
-        <StatusBadge status={app.status} />
+
+        {/* Nút xem chi tiết ở góc phải */}
+        <button
+          onClick={() => onViewDetail(app.id)}
+          className="flex items-center justify-center size-9 rounded-xl bg-slate-50 hover:bg-[#1e3fae]/10 text-slate-500 hover:text-[#1e3fae] transition-all border border-slate-200 shadow-sm flex-shrink-0"
+          title="Xem chi tiết"
+        >
+          <Eye className="w-4 h-4" />
+        </button>
       </div>
 
-      <div className="h-px bg-slate-100" />
-
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-1.5 text-xs text-slate-400">
-          <Calendar className="w-3.5 h-3.5" />
-          <span>Nộp {formatRelativeTime(app.applied_at)}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => onViewDetail(app.id)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-[#1e3fae]/10 text-slate-600 hover:text-[#1e3fae] text-xs font-semibold transition-colors border border-slate-200"
-          >
-            <Eye className="w-3.5 h-3.5" />
-            Xem chi tiết
-          </button>
+      {/* Hàng dưới: Nút Rút đơn / Xóa đơn (Chỉ hiện nếu có) */}
+      {(app.status === "submitted" || app.status === "rejected") && (
+        <div className="pt-3 border-t border-slate-50 flex justify-end">
           {app.status === "submitted" && (
             <button
               onClick={() => onWithdraw(app.id)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold transition-colors border border-red-200"
+              className="flex items-center gap-1.5 px-4 h-9 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold transition-all border border-red-200"
             >
               <Trash2 className="w-3.5 h-3.5" />
-              Rút đơn
+              Rút đơn 
             </button>
           )}
-        </div>
-      </div>
 
-      {(app.job?.job_type || app.job?.salary_min || app.job?.salary_max) && (
-        <div className="flex flex-wrap gap-2">
-          {app.job?.job_type && (
-            <span className="text-xs px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-full text-slate-500">{app.job.job_type}</span>
+          {app.status === "rejected" && (
+            <button
+              onClick={() => onDeleteRejected(app.id)}
+              className="flex items-center gap-1.5 px-4 h-9 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold transition-all border border-red-200"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Xóa đơn 
+            </button>
           )}
-          {(app.job?.salary_min || app.job?.salary_max) && (
-            <span className="text-xs px-2.5 py-1 bg-emerald-50 border border-emerald-200 rounded-full text-emerald-700 font-medium">
-              {app.job.salary_min && app.job.salary_max
-                ? `${(app.job.salary_min / 1_000_000).toFixed(0)}–${(app.job.salary_max / 1_000_000).toFixed(0)} triệu`
-                : app.job.salary_min
-                ? `Từ ${(app.job.salary_min / 1_000_000).toFixed(0)} triệu`
-                : `Đến ${(app.job.salary_max! / 1_000_000).toFixed(0)} triệu`}
-            </span>
-          )}
-        </div>
-      )}
-
-      {app.status === "rejected" && app.note_by_recruiter && (
-        <div className="bg-red-50 border border-red-100 rounded-xl p-3 text-xs text-red-700">
-          <span className="font-semibold">Lý do từ chối:</span> {app.note_by_recruiter}
         </div>
       )}
     </div>
@@ -141,18 +156,19 @@ function ApplicationCard({ app, onWithdraw, onViewDetail }: {
 
 function Skeleton() {
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl p-5 animate-pulse flex flex-col gap-4">
-      <div className="flex items-start gap-4">
-        <div className="size-14 rounded-xl bg-slate-200 flex-shrink-0" />
+    <div className="bg-white border border-slate-200 rounded-2xl p-4 animate-pulse flex flex-col sm:flex-row sm:items-center gap-4">
+      <div className="flex items-center gap-4 flex-1">
+        <div className="size-12 rounded-xl bg-slate-200 flex-shrink-0" />
         <div className="flex-1 space-y-2">
-          <div className="h-4 bg-slate-200 rounded w-3/4" />
-          <div className="h-3 bg-slate-100 rounded w-1/2" />
+          <div className="h-4 bg-slate-200 rounded w-1/2" />
           <div className="h-3 bg-slate-100 rounded w-1/3" />
         </div>
-        <div className="h-7 w-28 bg-slate-200 rounded-full" />
       </div>
-      <div className="h-px bg-slate-100" />
-      <div className="h-3 bg-slate-100 rounded w-1/4" />
+      <div className="flex items-center gap-3">
+        <div className="h-6 w-20 bg-slate-100 rounded-full" />
+        <div className="size-9 bg-slate-200 rounded-xl" />
+        <div className="h-9 w-24 bg-slate-200 rounded-xl" />
+      </div>
     </div>
   );
 }
@@ -183,6 +199,14 @@ export default function MyApplications() {
       await applicationService.withdrawApplication(id);
       setApplications((prev) => prev.filter((a) => a.id !== id));
     } catch { alert("Có lỗi xảy ra khi rút đơn. Vui lòng thử lại."); }
+  };
+
+  const handleDeleteRejected = async (id: string) => {
+    if (!confirm("Bạn có chắc muốn xóa đơn ứng tuyển đã bị từ chối này không?")) return;
+    try {
+      await applicationService.deleteRejectedApplication(id);
+      setApplications((prev) => prev.filter((a) => a.id !== id));
+    } catch { alert("Có lỗi xảy ra khi xóa đơn. Vui lòng thử lại."); }
   };
 
   const filtered = applications.filter((app) => {
@@ -283,7 +307,13 @@ export default function MyApplications() {
           <>
             <div className="grid gap-4">
               {paginated.map((app) => (
-                <ApplicationCard key={app.id} app={app} onWithdraw={handleWithdraw} onViewDetail={setSelectedAppId} />
+                <ApplicationCard
+                  key={app.id}
+                  app={app}
+                  onWithdraw={handleWithdraw}
+                  onDeleteRejected={handleDeleteRejected}
+                  onViewDetail={setSelectedAppId}
+                />
               ))}
             </div>
             {totalPages > 1 && (

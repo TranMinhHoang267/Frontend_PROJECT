@@ -7,21 +7,25 @@ export interface CandidateProfile {
   phone?: string;
   headline?: string;
   bio?: string;
-  website?: string;
-  linkedin_url?: string;
+  address?: string;
+  city?: string;
+  dateOfBirth?: string; // "YYYY-MM-DD"
+  gender?: string;
 }
 
-// Chỉ bio, website, linkedin_url có thể xóa (DELETE)
-export type ClearableField = 'bio' | 'website' | 'linkedin_url';
+// Các trường có thể xóa (DELETE)
+export type ClearableField = 'bio' | 'address' | 'city' | 'dateOfBirth' | 'gender';
 
-// Update payload có thể sửa: full_name, phone, headline, bio, website, linkedin_url
+// Update payload
 export interface UpdateProfilePayload {
   full_name?: string;
   phone?: string;
   headline?: string;
   bio?: string;
-  website?: string;
-  linkedin_url?: string;
+  address?: string;
+  city?: string;
+  dateOfBirth?: string;
+  gender?: string;
 }
 
 // ---- Service ----
@@ -29,17 +33,57 @@ export const candidateService = {
   // GET /api/candidate/profile
   getProfile: async (): Promise<CandidateProfile> => {
     const response = await apiClient.get('/candidate/profile');
-    return response.data?.data ?? response.data;
+    const data = response.data?.data ?? response.data;
+    // Map BE -> FE
+    return {
+      full_name: data.fullName,
+      email: data.email,
+      phone: data.phone,
+      headline: data.headline,
+      bio: data.summary,
+      address: data.address,
+      city: data.city,
+      dateOfBirth: data.dateOfBirth ? data.dateOfBirth.split('T')[0] : undefined,
+      gender: data.gender,
+    };
   },
 
   // PUT /api/candidate/profile
   updateProfile: async (payload: UpdateProfilePayload): Promise<CandidateProfile> => {
-    const response = await apiClient.put('/candidate/profile', payload);
-    return response.data?.data ?? response.data;
+    // Map FE -> BE
+    const bePayload = {
+      fullName: payload.full_name,
+      phone: payload.phone,
+      headline: payload.headline,
+      summary: payload.bio,
+      address: payload.address,
+      city: payload.city,
+      gender: payload.gender,
+      ...(payload.dateOfBirth ? { dateOfBirth: payload.dateOfBirth } : {}),
+    };
+    const response = await apiClient.put('/candidate/profile', bePayload);
+    const data = response.data?.data ?? response.data;
+    // Map BE -> FE
+    return {
+      full_name: data.fullName,
+      email: data.email,
+      phone: data.phone,
+      headline: data.headline,
+      bio: data.summary,
+      address: data.address,
+      city: data.city,
+      dateOfBirth: data.dateOfBirth ? data.dateOfBirth.split('T')[0] : undefined,
+      gender: data.gender,
+    };
   },
 
   // DELETE /api/candidate/profile — xóa các trường được chỉ định
   clearFields: async (fields: ClearableField[]): Promise<void> => {
-    await apiClient.delete('/candidate/profile', { data: { fields } });
+    // Map FE -> BE
+    const beFields = fields.map(f => {
+      if (f === 'bio') return 'summary';
+      return f;
+    });
+    await apiClient.delete('/candidate/profile', { data: { fields: beFields } });
   },
 };

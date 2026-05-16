@@ -169,13 +169,19 @@ export default function CandidatesManager() {
                   const status = STATUS_CONFIG[app.status] || { label: app.status, classes: "bg-slate-100 text-slate-600 border-slate-200", dot: "bg-slate-400" };
                   const fullName = app.candidate?.full_name || `${app.candidate?.first_name || 'N'} ${app.candidate?.last_name || 'A'}`;
                   
+                  const avatarSrc = app.candidate?.avatar_url 
+                    ? (app.candidate.avatar_url.startsWith("http") 
+                        ? app.candidate.avatar_url 
+                        : `${(import.meta.env.VITE_API_BASE_URL || "").replace(/\/api\/?$/, "")}${app.candidate.avatar_url.startsWith("/") ? "" : "/"}${app.candidate.avatar_url}`)
+                    : null;
+
                   return (
                     <tr key={app.application_id || app.id} className="group hover:bg-slate-50/50 transition-colors">
                       <td className="py-4 px-6">
                         <div className="flex items-center gap-3">
                           <div className="size-11 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center flex-shrink-0">
-                            {app.candidate?.avatar_url ? (
-                              <img src={app.candidate.avatar_url} alt="" className="w-full h-full rounded-2xl object-cover" />
+                            {avatarSrc ? (
+                              <img src={avatarSrc} alt="" className="w-full h-full rounded-2xl object-cover" />
                             ) : (
                               <span className="text-blue-700 font-black text-sm">{fullName.charAt(0).toUpperCase()}</span>
                             )}

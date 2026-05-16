@@ -15,14 +15,14 @@ interface JobDetail {
   description: string | null;
   requirements: string | null;
   benefits: string | null;
-  salary_min: number | null;
-  salary_max: number | null;
+  salaryMin: number | null;
+  salaryMax: number | null;
   location: string | null;
-  job_type: string | null;
-  job_level: string | null;
+  jobType: string | null;
+  jobLevel: string | null;
   deadline: string | null;
   status: "pending" | "approved" | "paused" | "rejected";
-  rejection_reason: string | null;
+  rejectionReason: string | null;
   createdAt: string;
   updatedAt: string;
   skills: Skill[];
@@ -139,21 +139,21 @@ export default function RecruiterJobDetail() {
                   {job.location}
                 </span>
               )}
-              {job.job_type && (
+              {job.jobType && (
                 <span className="flex items-center gap-1.5 text-sm text-slate-500 font-medium">
                   <span className="material-symbols-outlined text-[18px] text-slate-400">schedule</span>
-                  {job.job_type}
+                  {job.jobType}
                 </span>
               )}
-              {job.job_level && (
+              {job.jobLevel && (
                 <span className="flex items-center gap-1.5 text-sm text-slate-500 font-medium">
                   <span className="material-symbols-outlined text-[18px] text-slate-400">trending_up</span>
-                  {job.job_level}
+                  {job.jobLevel}
                 </span>
               )}
               <span className="flex items-center gap-1.5 text-sm text-slate-500 font-medium">
                 <span className="material-symbols-outlined text-[18px] text-slate-400">payments</span>
-                {salaryText(job.salary_min, job.salary_max)}
+                {salaryText(job.salaryMin, job.salaryMax)}
               </span>
               {deadline && (
                 <span className={`flex items-center gap-1.5 text-sm font-semibold ${isPastDeadline ? "text-red-500" : "text-slate-500"}`}>
@@ -172,10 +172,10 @@ export default function RecruiterJobDetail() {
       </div>
 
       {/* Rejected reason */}
-      {job.status === "rejected" && job.rejection_reason && (
+      {job.status === "rejected" && job.rejectionReason && (
         <div className="mb-5 bg-red-50 border border-red-200 rounded-xl px-5 py-4">
           <p className="text-sm font-bold text-red-600 mb-1">Lý do từ chối:</p>
-          <p className="text-sm text-red-500">{job.rejection_reason}</p>
+          <p className="text-sm text-red-500">{job.rejectionReason}</p>
         </div>
       )}
 

@@ -5,7 +5,7 @@ import { jobService } from "../../services/job.service";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 interface Applicant {
-  id: number;           // application_id
+  id: string;           // application_id
   full_name: string;
   email: string;
   applied_at: string;
@@ -13,13 +13,13 @@ interface Applicant {
 }
 
 interface JobWithApplicants {
-  id: number;
+  id: string;
   title: string;
   location: string | null;
-  job_type: string | null;
-  job_level: string | null;
-  salary_min: number | null;
-  salary_max: number | null;
+  jobType: string | null;
+  jobLevel: string | null;
+  salaryMin: number | null;
+  salaryMax: number | null;
   status: "approved" | "paused";
   deadline: string | null;
   updatedAt: string;
@@ -50,10 +50,10 @@ const timeLeft = (deadline: string | null) => {
 };
 
 const JOB_COLORS = ["#4f46e5", "#0891b2", "#059669", "#d97706", "#dc2626", "#7c3aed"];
-const JobIcon = ({ title, id }: { title: string; id: number }) => (
+const JobIcon = ({ title, id }: { title: string; id: string }) => (
   <div
     className="size-12 rounded-xl flex items-center justify-center flex-shrink-0 text-white text-xl font-bold"
-    style={{ background: JOB_COLORS[id % JOB_COLORS.length] }}
+    style={{ background: JOB_COLORS[id.length % JOB_COLORS.length] }}
   >
     {title.charAt(0).toUpperCase()}
   </div>
@@ -72,8 +72,8 @@ const ApplicantDrawer = ({
   applicants: Applicant[];
   loading: boolean;
   onClose: () => void;
-  onDeleteApp: (id: number) => void;
-  onViewApp: (id: number) => void;
+  onDeleteApp: (id: string) => void;
+  onViewApp: (id: string) => void;
 }) => (
   <div className="fixed inset-0 z-50 flex justify-end" onClick={onClose}>
     <div className="absolute inset-0 bg-black/20 backdrop-blur-[2px]" />
@@ -86,7 +86,7 @@ const ApplicantDrawer = ({
         <div>
           <h2 className="font-black text-slate-900 text-base">{job.title}</h2>
           <p className="text-slate-500 text-xs mt-0.5">
-            {job.location ?? "Không xác định"} • {job.job_type ?? ""}
+            {job.location ?? "Không xác định"} • {job.jobType ?? ""}
           </p>
         </div>
         <button
@@ -169,7 +169,7 @@ export default function JobsManager() {
   const [applicants, setApplicants] = useState<Applicant[]>([]);
   const [loadingApplicants, setLoadingApplicants] = useState(false);
 
-  const [togglingId, setTogglingId] = useState<number | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ type: "ok" | "err"; msg: string } | null>(null);
 
   const showToast = (type: "ok" | "err", msg: string) => {
@@ -199,8 +199,6 @@ export default function JobsManager() {
           const result = countResults[idx];
           if (result.status === "fulfilled") {
             const val = result.value;
-            // Shape A (after server restart): { status, count, data: [...] }
-            // Shape B (current):              { status, data: { total_items, applications: [...] } }
             const cnt =
               val?.count
               ?? val?.data?.total_items
@@ -227,18 +225,26 @@ export default function JobsManager() {
     setLoadingApplicants(true);
     try {
       const res = await jobService.getApplicants(job.id);
-      // Shape A: { status, count, data: [...] }
-      // Shape B: { status, data: { total_items, applications: [...] } }
       const rawArr =
         Array.isArray(res?.data) ? res.data
         : Array.isArray(res?.data?.applications) ? res.data.applications
         : [];
-      type RawApp = { application_id: number; status: string; applied_at: string; candidate?: { full_name?: string; email?: string } };
-      const mapped: Applicant[] = (rawArr as RawApp[]).map(item => ({
-        id:         item.application_id,
-        full_name:  item.candidate?.full_name ?? "Ứng viên",
-        email:      item.candidate?.email ?? "",
-        applied_at: item.applied_at,
+
+      interface RawApplicant {
+        application_id?: string;
+        id?: string;
+        candidate?: { full_name?: string; email?: string };
+        full_name?: string;
+        email?: string;
+        applied_at?: string;
+        createdAt?: string;
+        status: string;
+      }
+      const mapped: Applicant[] = (rawArr as RawApplicant[]).map(item => ({
+        id:         item.application_id || item.id || "",
+        full_name:  item.candidate?.full_name ?? item.full_name ?? "Ứng viên",
+        email:      item.candidate?.email ?? item.email ?? "",
+        applied_at: item.applied_at || item.createdAt || "",
         status:     item.status,
       }));
       setApplicants(mapped);
@@ -250,7 +256,7 @@ export default function JobsManager() {
   };
 
   // Delete applicant — also decrement count on job card
-  const handleDeleteApp = async (appId: number) => {
+  const handleDeleteApp = async (appId: string) => {
     if (!window.confirm("Bạn có chắc chắn muốn xóa hồ sơ ứng tuyển này? Hành động này không thể hoàn tác.")) return;
     try {
       await jobService.deleteApplication(appId);
@@ -270,7 +276,7 @@ export default function JobsManager() {
   };
 
   // Toggle pause
-  const handleToggle = async (id: number) => {
+  const handleToggle = async (id: string) => {
     setTogglingId(id);
     try {
       const res = await jobService.togglePause(id);
@@ -284,7 +290,7 @@ export default function JobsManager() {
   };
 
   // Delete job — also removes it from the count total
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string) => {
     if (!window.confirm("Bạn có chắc chắn muốn xóa tin tuyển dụng này? Tất cả hồ sơ ứng tuyển liên quan cũng sẽ bị xóa.")) {
       return;
     }
@@ -416,12 +422,12 @@ export default function JobsManager() {
                       )}
                       <span className="flex items-center gap-1 text-xs text-slate-500">
                         <span className="material-symbols-outlined text-[13px]">payments</span>
-                        {formatSalary(job.salary_min, job.salary_max)}
+                        {formatSalary(job.salaryMin, job.salaryMax)}
                       </span>
-                      {job.job_type && (
+                      {job.jobType && (
                         <span className="flex items-center gap-1 text-xs text-slate-500">
                           <span className="material-symbols-outlined text-[13px]">schedule</span>
-                          {job.job_type}
+                          {job.jobType}
                         </span>
                       )}
                     </div>

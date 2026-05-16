@@ -2,11 +2,10 @@ import { apiClient } from '../config/axios';
 
 export interface CvFile {
   id: string;
-  file_name?: string; 
-  file_url?: string;
-  file_size?: string;
-  created_at: string;
-  is_default?: boolean;
+  title: string;
+  fileUrl: string;
+  createdAt: string;
+  isDefault: boolean;
 }
 
 export const resumeService = {
@@ -35,21 +34,12 @@ export const resumeService = {
     await apiClient.delete(`/resumes/${id}`);
   },
 
-  // Lấy URL xem trước hoặc tải file
+  // Lấy URL xem trước (link trực tiếp đến file tĩnh, không cần auth header)
   getViewUrl: (cv: CvFile): string => {
-    const url = cv.file_url;
-    if (url && url.startsWith('http')) return url;
-
-    // Đường dẫn tĩnh: /uploads/resumes/filename
-    const filename = cv.file_name || cv.id;
-    const staticPath = `/uploads/resumes/${filename}`;
-    
-    if (url && url.startsWith('/')) {
-      const apiUrl = import.meta.env.VITE_API_BASE_URL || '';
-      return `${apiUrl.replace(/\/api\/?$/, '')}${url}`;
-    }
-
     const apiUrl = import.meta.env.VITE_API_BASE_URL || '';
-    return `${apiUrl.replace(/\/api\/?$/, '')}${staticPath}`;
+    // Bỏ phần /api ở cuối để lấy base URL của server (vd: http://localhost:3000)
+    const baseUrl = apiUrl.replace(/\/api\/?$/, '');
+    // fileUrl từ backend luôn có dạng /uploads/resumes/resume-xxx.pdf
+    return `${baseUrl}${cv.fileUrl}`;
   }
 };

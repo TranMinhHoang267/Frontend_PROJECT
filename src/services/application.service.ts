@@ -50,4 +50,9 @@ export const applicationService = {
     const res = await apiClient.delete(`/applications/${id}`);
     return res.data;
   },
+
+  deleteRejectedApplication: async (id: string) => {
+    const res = await apiClient.delete(`/applications/${id}/rejected`);
+    return res.data;
+  },
 };

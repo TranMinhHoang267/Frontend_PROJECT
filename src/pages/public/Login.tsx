@@ -13,16 +13,16 @@ const loginSchema = z.object({
 });
 
 const registerCandidateSchema = z.object({
-  full_name: z.string().min(1, "Vui lòng nhập họ tên"),
+  fullName: z.string().min(1, "Vui lòng nhập họ tên"),
   phone: z.string().min(10, "Số điện thoại không hợp lệ"),
   email: z.string().min(1, "Vui lòng nhập email").email("Email không hợp lệ").endsWith("@gmail.com", "Email phải có đuôi @gmail.com"),
   password: z.string().min(6, "Password phải có ít nhất 6 ký tự"),
 });
 
 const registerBusinessSchema = z.object({
-  company_name: z.string().min(1, "Vui lòng nhập tên công ty"),
+  companyName: z.string().min(1, "Vui lòng nhập tên công ty"),
   address: z.string().min(1, "Vui lòng nhập địa chỉ công ty"),
-  full_name: z.string().min(1, "Vui lòng nhập họ tên"),
+  fullName: z.string().min(1, "Vui lòng nhập họ tên"),
   phone: z.string().min(10, "Số điện thoại không hợp lệ"),
   email: z.string().min(1, "Vui lòng nhập email").email("Email không hợp lệ").endsWith("@gmail.com", "Email phải có đuôi @gmail.com"),
   password: z.string().min(6, "Password phải có ít nhất 6 ký tự"),
@@ -82,10 +82,10 @@ export default function Login() {
       const user = {
         id: responseData.id,
         email: responseData.email,
-        fullName: responseData.full_name || responseData.fullName || "User",
+        fullName: responseData.fullName || responseData.full_name || "User",
         role: responseData.role as 'candidate' | 'recruiter' | 'admin',
         phone: responseData.phone,
-        avatar: responseData.avatar_url || responseData.avatar || undefined,
+        avatar: responseData.avatarUrl || responseData.avatar || undefined,
       };
       
       setAuth(user, accessToken, refreshToken || "");
@@ -128,13 +128,12 @@ export default function Login() {
     setIsLoading(true);
     setErrorMsg("");
     try {
-      // Backend may need adjusting to accept company_name, etc.
       await authService.register({ 
-        full_name: data.full_name, 
+        fullName: data.fullName, 
         email: data.email, 
         password: data.password, 
         phone: data.phone, 
-        company_name: data.company_name,
+        companyName: data.companyName,
         address: data.address
       });
       alert("Đăng ký Doanh nghiệp thành công! Đăng nhập ngay.");
@@ -276,13 +275,13 @@ export default function Login() {
                 <div className="relative">
                   <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xl">person</span>
                   <input 
-                    {...candidateForm.register("full_name")}
-                    className={`w-full pl-11 pr-4 py-3 bg-slate-50 border ${candidateForm.formState.errors.full_name ? 'border-red-500' : 'border-slate-200'} rounded-lg focus:ring-2 focus:ring-[#1e3fae]/20 outline-none transition-all text-slate-900 placeholder:text-slate-400`}
+                    {...candidateForm.register("fullName")}
+                    className={`w-full pl-11 pr-4 py-3 bg-slate-50 border ${candidateForm.formState.errors.fullName ? 'border-red-500' : 'border-slate-200'} rounded-lg focus:ring-2 focus:ring-[#1e3fae]/20 outline-none transition-all text-slate-900 placeholder:text-slate-400`}
                     placeholder="John Doe" 
                   />
                 </div>
-                {candidateForm.formState.errors.full_name && (
-                  <span className="text-xs text-red-500 font-medium">{candidateForm.formState.errors.full_name.message}</span>
+                {candidateForm.formState.errors.fullName && (
+                  <span className="text-xs text-red-500 font-medium">{candidateForm.formState.errors.fullName.message}</span>
                 )}
               </div>
 
@@ -356,11 +355,11 @@ export default function Login() {
                 <div className="flex flex-col gap-2">
                   <label className="text-slate-700 text-sm font-semibold">Full Name</label>
                   <input 
-                    {...businessForm.register("full_name")}
-                    className={`w-full px-4 py-3 bg-slate-50 border ${businessForm.formState.errors.full_name ? 'border-red-500' : 'border-slate-200'} rounded-lg focus:ring-2 focus:ring-[#1e3fae]/20 outline-none transition-all text-slate-900`}
+                    {...businessForm.register("fullName")}
+                    className={`w-full px-4 py-3 bg-slate-50 border ${businessForm.formState.errors.fullName ? 'border-red-500' : 'border-slate-200'} rounded-lg focus:ring-2 focus:ring-[#1e3fae]/20 outline-none transition-all text-slate-900`}
                     placeholder="Jane Doe" 
                   />
-                  {businessForm.formState.errors.full_name && <span className="text-xs text-red-500 font-medium">{businessForm.formState.errors.full_name.message}</span>}
+                  {businessForm.formState.errors.fullName && <span className="text-xs text-red-500 font-medium">{businessForm.formState.errors.fullName.message}</span>}
                 </div>
                 <div className="flex flex-col gap-2">
                   <label className="text-slate-700 text-sm font-semibold">Phone Number</label>
@@ -386,11 +385,11 @@ export default function Login() {
               <div className="flex flex-col gap-2">
                 <label className="text-slate-700 text-sm font-semibold">Company Name</label>
                 <input 
-                  {...businessForm.register("company_name")}
-                  className={`w-full px-4 py-3 bg-slate-50 border ${businessForm.formState.errors.company_name ? 'border-red-500' : 'border-slate-200'} rounded-lg focus:ring-2 focus:ring-[#1e3fae]/20 outline-none transition-all text-slate-900`}
+                  {...businessForm.register("companyName")}
+                  className={`w-full px-4 py-3 bg-slate-50 border ${businessForm.formState.errors.companyName ? 'border-red-500' : 'border-slate-200'} rounded-lg focus:ring-2 focus:ring-[#1e3fae]/20 outline-none transition-all text-slate-900`}
                   placeholder="Acme Corp" 
                 />
-                {businessForm.formState.errors.company_name && <span className="text-xs text-red-500 font-medium">{businessForm.formState.errors.company_name.message}</span>}
+                {businessForm.formState.errors.companyName && <span className="text-xs text-red-500 font-medium">{businessForm.formState.errors.companyName.message}</span>}
               </div>
 
               <div className="flex flex-col gap-2">

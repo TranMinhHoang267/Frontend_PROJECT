@@ -7,11 +7,11 @@ export interface LoginPayload {
 }
 
 export interface RegisterPayload {
-  full_name: string;
+  fullName: string;
   phone: string;
   email: string;
   password?: string;
-  company_name?: string;
+  companyName?: string;
   address?: string;
 }
 

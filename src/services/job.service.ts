@@ -5,11 +5,11 @@ export interface CreateJobPayload {
   description?: string | null;
   requirements?: string | null;
   benefits?: string | null;
-  salary_min?: number | null;
-  salary_max?: number | null;
+  salaryMin?: number | null;
+  salaryMax?: number | null;
   location?: string | null;
-  job_type?: string | null;
-  job_level?: string | null;
+  jobType?: string | null;
+  jobLevel?: string | null;
   deadline?: string | null;
   skills?: string[];
 }

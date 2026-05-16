@@ -3,22 +3,27 @@ import { Plus, X, Loader2, CheckCircle2, Trash2, Eye, PauseCircle, PlayCircle } 
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { AxiosError } from "axios";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { jobService } from "../../services/job.service";
-import type { AxiosError } from "axios";
-import { useSearchParams } from "react-router-dom";
+import type { CreateJobPayload } from "../../services/job.service";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 interface Job {
-  id: number;
+  id: string;
   title: string;
   location: string | null;
-  job_type: string | null;
-  job_level: string | null;
-  salary_min: number | null;
-  salary_max: number | null;
+  jobType: string | null;
+  jobLevel: string | null;
+  salaryMin: number | null;
+  salaryMax: number | null;
   status: "pending" | "approved" | "rejected" | "paused";
   updatedAt: string;
   skills?: { name: string }[];
+  deadline?: string | null;
+  description?: string | null;
+  requirements?: string | null;
+  benefits?: string | null;
 }
 
 // ─── Schema ─────────────────────────────────────────────────────────────────
@@ -70,8 +75,8 @@ const timeAgo = (iso: string) => {
 
 // ─── Job Icon ─────────────────────────────────────────────────────────────────
 const JOB_COLORS = ["#4f46e5","#0891b2","#059669","#d97706","#dc2626","#7c3aed"];
-const JobIcon = ({ title, id }: { title: string; id: number }) => {
-  const color = JOB_COLORS[id % JOB_COLORS.length];
+const JobIcon = ({ title, id }: { title: string; id: string }) => {
+  const color = JOB_COLORS[id.length % JOB_COLORS.length];
   return (
     <div className="size-11 rounded-xl flex items-center justify-center flex-shrink-0 text-white text-lg font-bold" style={{ background: color }}>
       {title.charAt(0).toUpperCase()}
@@ -81,6 +86,7 @@ const JobIcon = ({ title, id }: { title: string; id: number }) => {
 
 // ══════════════════════════════════════════════════════════════════════════════
 export default function JobManagement() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const initialTab = searchParams.get("tab") === "manage" ? "manage" : "post";
   const [tab, setTab] = useState<"post" | "manage">(initialTab);
@@ -100,8 +106,9 @@ export default function JobManagement() {
   // ── Job list state ──
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loadingJobs, setLoadingJobs] = useState(false);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
-  const [togglingId, setTogglingId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [editingJobId, setEditingJobId] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>("all");
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<JobFormValues>({
@@ -142,17 +149,81 @@ export default function JobManagement() {
   };
   const removeSkill = (sk: string) => setSkills(skills.filter(s => s !== sk));
 
+  // ── Handle Edit Click ──
+  const handleEditClick = (job: Job) => {
+    setEditingJobId(job.id);
+    setTab("post");
+    
+    // Format deadline for input[type="date"]
+    let deadlineStr = "";
+    if (job.deadline) {
+      deadlineStr = new Date(job.deadline).toISOString().split('T')[0];
+    }
+
+    reset({
+      title: job.title,
+      job_type: job.jobType || "Toàn thời gian",
+      job_level: job.jobLevel || "Junior",
+      location: job.location || "",
+      description: job.description || "",
+      requirements: job.requirements || "",
+      benefits: job.benefits || "",
+      salary_min: job.salaryMin !== null ? String(job.salaryMin) : "",
+      salary_max: job.salaryMax !== null ? String(job.salaryMax) : "",
+      deadline: deadlineStr,
+    });
+
+    setSkills(job.skills?.map(s => s.name) || []);
+    setIsNegotiable(job.salaryMin === null && job.salaryMax === null);
+    
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingJobId(null);
+    reset({
+      title: "",
+      job_type: "Toàn thời gian",
+      job_level: "Junior",
+      location: "",
+      description: "",
+      requirements: "",
+      benefits: "",
+      salary_min: "",
+      salary_max: "",
+      deadline: "",
+    });
+    setSkills([]);
+    setIsNegotiable(true);
+  };
+
   // ── Submit ──
   const onSubmit = async (data: JobFormValues) => {
     setIsSubmitting(true);
     try {
-      await jobService.createJob({
-        ...data,
-        salary_min: isNegotiable ? null : (data.salary_min ? Number(data.salary_min) : null),
-        salary_max: isNegotiable ? null : (data.salary_max ? Number(data.salary_max) : null),
+      const payload: CreateJobPayload = {
+        title: data.title,
+        description: data.description,
+        requirements: data.requirements,
+        benefits: data.benefits,
+        salaryMin: isNegotiable ? null : (data.salary_min ? Number(data.salary_min) : null),
+        salaryMax: isNegotiable ? null : (data.salary_max ? Number(data.salary_max) : null),
+        location: data.location,
+        jobType: data.job_type,
+        jobLevel: data.job_level,
+        deadline: data.deadline ? new Date(data.deadline).toISOString() : null,
         skills,
-      });
-      showToast("ok", "Đăng tin thành công! Đang chờ Admin duyệt.");
+      };
+
+      if (editingJobId) {
+        await jobService.updateJob(editingJobId, payload);
+        showToast("ok", "Cập nhật thành công! Tin đang chờ duyệt lại.");
+        setEditingJobId(null);
+      } else {
+        await jobService.createJob(payload);
+        showToast("ok", "Đăng tin thành công! Đang chờ Admin duyệt.");
+      }
+
       reset();
       setSkills([]);
       setIsNegotiable(true);
@@ -160,38 +231,38 @@ export default function JobManagement() {
       loadJobs();
     } catch (err) {
       const ae = err as AxiosError<{ message: string }>;
-      showToast("err", ae.response?.data?.message ?? "Đăng tin thất bại.");
+      showToast("err", ae.response?.data?.message ?? "Thao tác thất bại.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // ── Delete ──
-  const handleDelete = async (id: number) => {
-    if (!confirm("Bạn chắc chắn muốn xóa tin đăng này?")) return;
-    setDeletingId(id);
-    try {
-      await jobService.deleteJob(id);
-      setJobs(j => j.filter(x => x.id !== id));
-      showToast("ok", "Đã xóa tin đăng.");
-    } catch {
-      showToast("err", "Không thể xóa tin đăng.");
-    } finally {
-      setDeletingId(null);
-    }
-  };
-
   // ── Toggle pause ──
-  const handleToggle = async (id: number) => {
+  const handleToggle = async (id: string) => {
     setTogglingId(id);
     try {
       const res = await jobService.togglePause(id);
-      setJobs(j => j.map(x => x.id === id ? { ...x, status: res.status } : x));
+      setJobs(prev => prev.map(x => x.id === id ? { ...x, status: res.status } : x));
       showToast("ok", res.message);
     } catch {
       showToast("err", "Không thể thay đổi trạng thái.");
     } finally {
       setTogglingId(null);
+    }
+  };
+
+  // ── Delete ──
+  const handleDelete = async (id: string) => {
+    if (!window.confirm("Bạn chắc chắn muốn xóa tin đăng này?")) return;
+    setDeletingId(id);
+    try {
+      await jobService.deleteJob(id);
+      setJobs(prev => prev.filter(x => x.id !== id));
+      showToast("ok", "Đã xóa tin đăng.");
+    } catch {
+      showToast("err", "Không thể xóa tin đăng.");
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -211,11 +282,13 @@ export default function JobManagement() {
       {/* ── Page Header ── */}
       <div className="flex items-start justify-between mb-7">
         <div>
-          <h1 className="text-2xl font-black tracking-tight">Quản lý Tin tuyển dụng</h1>
-          <p className="text-slate-500 text-sm mt-1">Theo dõi và quản lý hiệu quả các vị trí đang tuyển dụng.</p>
+          <h1 className="text-2xl font-black tracking-tight">{editingJobId ? "Chỉnh sửa Tin tuyển dụng" : "Quản lý Tin tuyển dụng"}</h1>
+          <p className="text-slate-500 text-sm mt-1">
+            {editingJobId ? "Cập nhật thông tin chi tiết cho tin tuyển dụng của bạn." : "Theo dõi và quản lý hiệu quả các vị trí đang tuyển dụng."}
+          </p>
         </div>
         {tab === "manage" && (
-          <button onClick={() => changeTab("post")} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#1e3fae] text-white font-bold text-sm hover:bg-[#162f8c] shadow-md shadow-[#1e3fae]/20 transition-all">
+          <button onClick={() => { handleCancelEdit(); changeTab("post"); }} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#1e3fae] text-white font-bold text-sm hover:bg-[#162f8c] shadow-md shadow-[#1e3fae]/20 transition-all">
             <Plus className="w-4 h-4" /> Đăng tin mới
           </button>
         )}
@@ -224,12 +297,15 @@ export default function JobManagement() {
       {/* ── Tabs ── */}
       <div className="flex gap-2 border-b border-slate-200 mb-7">
         {[
-          { key: "post",   label: "Đăng tin mới" },
+          { key: "post",   label: editingJobId ? "Cập nhật tin" : "Đăng tin mới" },
           { key: "manage", label: "Quản lý tin nháp" },
         ].map(t => (
           <button
             key={t.key}
-            onClick={() => changeTab(t.key as "post" | "manage")}
+            onClick={() => {
+              if (t.key === "post" && !editingJobId) handleCancelEdit();
+              changeTab(t.key as "post" | "manage");
+            }}
             className={`pb-3 px-1 mr-4 text-sm font-semibold border-b-2 transition-colors ${tab === t.key ? "border-[#1e3fae] text-[#1e3fae]" : "border-transparent text-slate-500 hover:text-slate-700"}`}
           >
             {t.label}
@@ -414,11 +490,13 @@ export default function JobManagement() {
                 className="w-full h-12 rounded-xl bg-[#1e3fae] text-white font-bold text-sm hover:bg-[#162f8c] shadow-md shadow-[#1e3fae]/20 transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <span className="material-symbols-outlined text-[18px]">rocket_launch</span>}
-                Đăng tin ngay
+                {editingJobId ? "Cập nhật tin" : "Đăng tin ngay"}
               </button>
-              <button type="button" onClick={handleSubmit(onSubmit)} className="w-full h-11 rounded-xl border border-slate-200 bg-white text-slate-700 font-semibold text-sm hover:bg-slate-50 transition-colors">
-                Lưu
-              </button>
+              {editingJobId && (
+                <button type="button" onClick={handleCancelEdit} className="w-full h-11 rounded-xl border border-slate-200 bg-white text-slate-700 font-semibold text-sm hover:bg-slate-50 transition-colors">
+                  Hủy chỉnh sửa
+                </button>
+              )}
             </div>
           </div>
         </form>
@@ -465,27 +543,13 @@ export default function JobManagement() {
           ) : (
             /* Grid */
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {/* Add new card */}
-              <button
-                onClick={() => changeTab("post")}
-                className="min-h-[180px] flex flex-col items-center justify-center gap-3 bg-white border-2 border-dashed border-slate-200 rounded-2xl hover:border-[#1e3fae]/40 hover:bg-blue-50/30 transition-all group"
-              >
-                <div className="size-10 rounded-xl bg-slate-100 flex items-center justify-center group-hover:bg-[#1e3fae]/10 transition-colors">
-                  <Plus className="w-5 h-5 text-slate-400 group-hover:text-[#1e3fae]" />
-                </div>
-                <div className="text-center">
-                  <p className="font-bold text-slate-600 group-hover:text-[#1e3fae] text-sm transition-colors">Đăng tin tuyển dụng</p>
-                  <p className="text-slate-400 text-xs mt-0.5">Bắt đầu quy trình tìm kiếm nhân tài mới</p>
-                </div>
-              </button>
-
               {filteredJobs.map(job => (
                 <div key={job.id} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col gap-4 hover:shadow-md transition-shadow">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       <JobIcon title={job.title} id={job.id} />
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-bold text-sm leading-snug line-clamp-2 text-slate-900">{job.title}</h3>
+                        <h3 className="font-bold text-sm leading-snug line-clamp-2 text-slate-900 min-h-[2.5rem]">{job.title}</h3>
                         <span className="flex items-center gap-1 text-slate-400 text-xs mt-1">
                           <span className="material-symbols-outlined text-[12px]">schedule</span>
                           {timeAgo(job.updatedAt)}
@@ -495,7 +559,7 @@ export default function JobManagement() {
                     <StatusBadge status={job.status} />
                   </div>
 
-                  <div className="space-y-1.5">
+                  <div className="space-y-1.5 flex-1">
                     {job.location && (
                       <div className="flex items-center gap-1.5 text-xs text-slate-500">
                         <span className="material-symbols-outlined text-[14px]">location_on</span>
@@ -504,13 +568,23 @@ export default function JobManagement() {
                     )}
                     <div className="flex items-center gap-1.5 text-xs text-slate-500">
                       <span className="material-symbols-outlined text-[14px]">payments</span>
-                      {formatSalary(job.salary_min, job.salary_max)}
+                      {formatSalary(job.salaryMin, job.salaryMax)}
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
-                    <button className="flex-1 flex items-center justify-center gap-1.5 h-9 rounded-xl bg-[#1e3fae] text-white text-xs font-semibold hover:bg-[#162f8c] transition-colors">
-                      <Eye className="w-3.5 h-3.5" /> Xem chi tiết
+                    <button 
+                      onClick={() => navigate(`/recruiter/jobs/${job.id}`)}
+                      className="flex-1 flex items-center justify-center gap-1.5 h-9 rounded-xl bg-[#1e3fae] text-white text-xs font-semibold hover:bg-[#162f8c] transition-colors"
+                    >
+                      <Eye className="w-3.5 h-3.5" /> Xem
+                    </button>
+                    <button 
+                      onClick={() => handleEditClick(job)}
+                      className="size-9 flex items-center justify-center rounded-xl border border-slate-200 text-[#1e3fae] hover:bg-blue-50 transition-colors"
+                      title="Chỉnh sửa"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">edit</span>
                     </button>
 
                     {/* Toggle pause (only for approved/paused) */}
