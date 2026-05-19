@@ -3,44 +3,9 @@ import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { employerApplicationService } from "../../services/employerApplication.service";
 import type { EmployerApplication } from "../../services/employerApplication.service";
 
-// ── Mock fallback data (dùng khi API chưa trả dữ liệu) ────────────────────
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const MOCK_EXPERIENCES: any[] = [
-  {
-    id: 1,
-    title: "Senior Frontend Developer",
-    company_name: "TechFlow Solutions",
-    start_date: "Tháng 06/2020",
-    end_date: null,
-    description:
-      "• Chịu trách nhiệm dẫn dắt việc di chuyển hệ thống dashboard cũ sang React 18 & Vite, giúp tăng tốc độ build lên 300%.\n• Tối ưu hóa bundle size giảm 40% thông qua các kỹ thuật code-splitting và lazy-loading nâng cao.\n• Quản lý và đào tạo đội ngũ 4 lập trình viên Frontend Junior, thiết lập các tiêu chuẩn code review mới.",
-  },
-  {
-    id: 2,
-    title: "Web Developer",
-    company_name: "Creative Pixel Agency",
-    start_date: "Tháng 01/2018",
-    end_date: "Tháng 05/2020",
-    description:
-      "• Phát triển UI pixel-perfect cho các khách hàng quốc tế trong lĩnh vực Thương mại điện tử và Fintech.\n• Tích hợp các thư viện animation mượt mà như Framer Motion và GSAP để tăng trải nghiệm người dùng.",
-  },
-];
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const MOCK_EDUCATIONS: any[] = [
-  {
-    id: 1,
-    school_name: "Đại học Công nghệ Thông tin",
-    major: "Cử nhân Khoa học Máy tính",
-    start_date: "2014",
-    end_date: "2018",
-  },
-];
-
-const MOCK_SKILLS = [
-  "React.js", "TypeScript", "Next.js", "Tailwind CSS",
-  "Redux Toolkit", "Vite", "Git / GitHub", "Figma to Code",
-];
+interface ApplicantDetail extends EmployerApplication {
+  resumeUrl?: string;
+}
 
 // ──────────────────────────────────────────────────────────────────────────
 
@@ -49,8 +14,8 @@ export default function CandidateDetail() {
   const navigate = useNavigate();
   const routeLocation = useLocation();
 
-  const initialApp = (routeLocation.state?.initialApp as EmployerApplication) || null;
-  const [app, setApp] = useState<EmployerApplication | null>(initialApp);
+  const initialApp = (routeLocation.state?.initialApp as ApplicantDetail) || null;
+  const [app, setApp] = useState<ApplicantDetail | null>(initialApp);
   const [loading, setLoading] = useState(!initialApp);
   const [cvBlobUrl, setCvBlobUrl] = useState<string | null>(null);
   const [cvLoading, setCvLoading] = useState(false);
@@ -59,10 +24,8 @@ export default function CandidateDetail() {
   const fetchDetail = useCallback(async (id: string | number) => {
     try {
       const data = await employerApplicationService.getApplicantDetail(id);
-      console.log("[CandidateDetail] API response:", data);
-      // Only update app if response looks like a valid application (has candidate field)
-      if (data && data.candidate) {
-        setApp(data as EmployerApplication);
+      if (data) {
+        setApp(data as ApplicantDetail);
       }
     } catch (err) {
       console.error("Lỗi tải hồ sơ:", err);
@@ -150,50 +113,45 @@ export default function CandidateDetail() {
   const profile = candidate?.candidateProfile ?? {};
 
   const fullName =
-    candidate?.full_name ||
-    [candidate?.first_name, candidate?.last_name].filter(Boolean).join(" ") ||
+    candidate?.fullName ||
+    [candidate?.firstName, candidate?.lastName].filter(Boolean).join(" ") ||
     "Ứng viên";
 
   const headline     = profile.headline ?? "";
   const candidateLoc = profile.location ?? "";
   const phone        = candidate?.phone ?? "";
   const email        = candidate?.email ?? "";
-  const bio          = profile.bio ?? "";
-  const coverLetter  = app.cover_letter ?? "";
-  const linkedinRaw  = profile.linkedin_url ?? "";
-  const websiteRaw   = profile.website ?? "";
-  const linkedinHref   = linkedinRaw.startsWith("http") ? linkedinRaw : linkedinRaw ? `https://${linkedinRaw}` : "";
-  const linkedinLabel  = linkedinRaw.replace(/^https?:\/\/(www\.)?/, "");
-  const websiteHref    = websiteRaw.startsWith("http") ? websiteRaw : websiteRaw ? `https://${websiteRaw}` : "";
-  const websiteLabel   = websiteRaw.replace(/^https?:\/\/(www\.)?/, "");
+  const summary      = profile.summary ?? "";
+  const city         = profile.city ?? "";
+  const gender       = profile.gender ?? "";
+  const coverLetter  = app.coverLetter ?? "";
 
   // skills API trả [{id, name}] hoặc string[], chuẩn hóa về string[]
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const rawSkills: any[] = (profile.skills && profile.skills.length > 0) ? profile.skills : [];
-  const skills: string[] = rawSkills.length > 0
+  const experiences = (profile.experiences && profile.experiences.length > 0) ? profile.experiences : [];
+  const educations  = (profile.educations  && profile.educations.length  > 0) ? profile.educations  : [];
+  const skills      = rawSkills.length > 0
     ? rawSkills.map((s) => (typeof s === "string" ? s : s.name ?? "")).filter(Boolean)
-    : MOCK_SKILLS;
-
-  const experiences = (profile.experiences && profile.experiences.length > 0) ? profile.experiences : MOCK_EXPERIENCES;
-  const educations  = (profile.educations  && profile.educations.length  > 0) ? profile.educations  : MOCK_EDUCATIONS;
+    : [];
 
   // Avatar: resolve relative URL — env var is VITE_API_BASE_URL (e.g. http://localhost:3000/api)
   const API_BASE = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/api\/?$/, '');
-  const avatarSrc = candidate?.avatar_url
-    ? candidate.avatar_url.startsWith('http')
-      ? candidate.avatar_url
-      : `${API_BASE}${candidate.avatar_url}`
+  const avatarSrc = candidate?.avatarUrl
+    ? candidate.avatarUrl.startsWith('http')
+      ? candidate.avatarUrl
+      : `${API_BASE}${candidate.avatarUrl}`
     : null;
 
   const avatarInitials = fullName.split(" ").filter(Boolean).slice(0, 2).map((w: string) => w[0]).join("").toUpperCase();
   
   // Status Config
   const STATUS_MAP: Record<string, { label: string; color: string; icon: string }> = {
-    submitted: { label: "Mới nộp", color: "bg-slate-100 text-slate-600 border-slate-200", icon: "mail" },
-    under_review: { label: "Đang xem xét", color: "bg-blue-50 text-blue-600 border-blue-200", icon: "visibility" },
-    interview: { label: "Hẹn phỏng vấn", color: "bg-purple-50 text-purple-600 border-purple-200", icon: "calendar_month" },
-    accepted: { label: "Đã tuyển dụng", color: "bg-green-50 text-green-600 border-green-200", icon: "check_circle" },
-    rejected: { label: "Đã từ chối", color: "bg-red-50 text-red-600 border-red-200", icon: "cancel" },
+    submitted:    { label: "Mới nộp", color: "bg-blue-50 text-blue-600 border-blue-100", icon: "mail" },
+    under_review: { label: "Đang xem xét", color: "bg-purple-50 text-purple-600 border-purple-100", icon: "visibility" },
+    interview:    { label: "Đang phỏng vấn", color: "bg-amber-50 text-amber-600 border-amber-100", icon: "calendar_month" },
+    accepted:     { label: "Đã tuyển", color: "bg-emerald-50 text-emerald-600 border-emerald-100", icon: "check_circle" },
+    rejected:     { label: "Đã từ chối", color: "bg-rose-50 text-rose-600 border-rose-100", icon: "cancel" },
   };
 
   const currentStatus = app.status || 'submitted';
@@ -251,21 +209,18 @@ export default function CandidateDetail() {
                     {statusInfo.label.toUpperCase()}
                   </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-sm text-slate-500 font-medium">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-2 text-sm">
                   {headline && (
-                    <div className="flex items-center gap-1 text-blue-600 font-semibold">
+                    <div className="flex items-center gap-1 text-blue-600 font-bold bg-blue-50/50 px-2 py-0.5 rounded-lg border border-blue-100/50 shadow-sm">
                       <span className="material-symbols-outlined text-[16px]">verified</span>
                       {headline}
                     </div>
                   )}
                   {candidateLoc && (
-                    <>
-                      <span className="text-slate-300">•</span>
-                      <div className="flex items-center gap-1">
-                        <span className="material-symbols-outlined text-[16px]">location_on</span>
-                        {candidateLoc}
-                      </div>
-                    </>
+                    <div className="flex items-center gap-1.5 text-slate-500 font-medium">
+                      <span className="material-symbols-outlined text-[18px]">location_on</span>
+                      {candidateLoc}
+                    </div>
                   )}
                 </div>
               </div>
@@ -287,89 +242,45 @@ export default function CandidateDetail() {
             </section>
           )}
 
-          {/* ── Giới thiệu bản thân ── */}
+          {/* ── Thông tin cá nhân ── */}
           <section>
-            <SectionDivider label="GIỚI THIỆU BẢN THÂN" />
-            <p className="text-slate-600 leading-relaxed text-[15px] mb-8">{bio}</p>
+            <SectionDivider label="THÔNG TIN CÁ NHÂN" />
+            {summary && <p className="text-slate-600 leading-relaxed text-[15px] mb-8">{summary}</p>}
 
             {/* Contact Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {phone && <ContactRow icon="call" label="ĐIỆN THOẠI" value={phone} />}
               {email && <ContactRow icon="alternate_email" label="EMAIL CÁ NHÂN" value={email} />}
-              {websiteRaw && (
-                <div className="col-span-1 border border-slate-100 rounded-xl">
-                  <ContactRow
-                    icon="link"
-                    label="GITHUB / WEBSITE"
-                    value={
-                      <a href={websiteHref} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline font-semibold line-clamp-1">
-                        {websiteLabel}
-                      </a>
-                    }
-                  />
-                </div>
-              )}
-              {linkedinRaw && (
-                <div className="col-span-1 border border-slate-100 rounded-xl">
-                  <ContactRow
-                    icon="public"
-                    label="LINKEDIN"
-                    value={
-                      <a href={linkedinHref} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline font-semibold line-clamp-1">
-                        {linkedinLabel}
-                      </a>
-                    }
-                  />
-                </div>
-              )}
+              {city && <ContactRow icon="map" label="THÀNH PHỐ" value={city} />}
+              {gender && <ContactRow icon="wc" label="GIỚI TÍNH" value={gender} />}
             </div>
           </section>
 
           {/* ── Kinh nghiệm làm việc ── */}
           <section>
             <SectionDivider label="KINH NGHIỆM LÀM VIỆC" />
-            <div className="space-y-0">
-              {experiences.map((exp, idx) => {
-                const isLast = idx === experiences.length - 1;
-                const expTitle = exp.title ?? exp.job_title ?? "";
-                const company  = exp.company_name ?? exp.company ?? "";
-                const from     = exp.start_date ?? "";
-                const to       = exp.end_date ? exp.end_date : "HIỆN TẠI";
-                const desc     = exp.description ?? "";
-                return (
-                  <div key={exp.id ?? idx} className="flex gap-5">
-                    {/* Timeline dot */}
-                    <div className="flex flex-col items-center pt-1">
-                      <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${idx === 0 ? "bg-blue-50 border-2 border-blue-200 text-blue-600" : "bg-slate-100 border-2 border-slate-200 text-slate-400"}`}>
-                        <span className="material-symbols-outlined text-[18px]">work</span>
-                      </div>
-                      {!isLast && <div className="w-px flex-1 bg-slate-200 my-2"></div>}
+            <div className="space-y-4">
+              {experiences.length > 0 ? (
+                experiences.map((exp, idx) => (
+                  <div key={exp.id ?? idx} className="flex gap-4 p-5 rounded-2xl border border-slate-100 bg-white shadow-sm">
+                    <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center flex-shrink-0">
+                      <span className="material-symbols-outlined text-[22px]">business_center</span>
                     </div>
-                    {/* Content */}
-                    <div className={`flex-1 ${!isLast ? "pb-8" : "pb-2"}`}>
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-2 gap-2">
-                        <div>
-                          <h4 className="text-base font-bold text-slate-900">{expTitle}</h4>
-                          <p className={`text-sm font-semibold ${idx === 0 ? "text-blue-600" : "text-slate-500"}`}>{company}</p>
-                        </div>
-                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider bg-slate-100 px-3 py-1 rounded-lg whitespace-nowrap self-start sm:self-auto">
-                          {fmtDate(from)} {to === "HIỆN TẠI" ? "– Hiện tại" : to ? `– ${fmtDate(to)}` : ""}
-                        </span>
-                      </div>
-                      {desc && (
-                        <ul className="mt-3 space-y-1.5">
-                          {desc.split("\n").filter((line: string) => line.trim()).map((line: string, li: number) => (
-                            <li key={li} className="flex items-start gap-2 text-sm text-slate-600">
-                              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-slate-300 flex-shrink-0"></span>
-                              <span>{line.replace(/^[•\-]\s*/, "")}</span>
-                            </li>
-                          ))}
-                        </ul>
+                    <div className="min-w-0">
+                      <h4 className="font-bold text-slate-900 text-sm truncate">{exp.jobTitle ?? exp.title}</h4>
+                      <p className="text-slate-600 text-sm font-medium mt-0.5">{exp.companyName ?? exp.company}</p>
+                      <p className="text-slate-400 text-xs mt-1 font-medium">
+                        {fmtDate(exp.startDate)} {exp.endDate ? `– ${fmtDate(exp.endDate)}` : "– Hiện tại"}
+                      </p>
+                      {exp.description && (
+                        <p className="text-slate-500 text-sm mt-3 leading-relaxed whitespace-pre-line">{exp.description}</p>
                       )}
                     </div>
                   </div>
-                );
-              })}
+                ))
+              ) : (
+                <p className="text-slate-400 text-sm italic">Chưa cập nhật kinh nghiệm làm việc</p>
+              )}
             </div>
           </section>
 
@@ -377,34 +288,28 @@ export default function CandidateDetail() {
           <section>
             <SectionDivider label="HỌC VẤN" />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {educations.map((edu, idx) => (
-                <div key={edu.id ?? idx} className="flex items-start gap-4 p-5 rounded-2xl border border-slate-100 bg-white shadow-sm">
-                  <div className="w-12 h-12 rounded-xl bg-orange-50 text-orange-500 flex items-center justify-center flex-shrink-0">
-                    <span className="material-symbols-outlined text-[22px]">school</span>
+              {educations.length > 0 ? (
+                educations.map((edu, idx) => (
+                  <div key={edu.id ?? idx} className="flex items-start gap-4 p-5 rounded-2xl border border-slate-100 bg-white shadow-sm">
+                    <div className="w-12 h-12 rounded-xl bg-orange-50 text-orange-500 flex items-center justify-center flex-shrink-0">
+                      <span className="material-symbols-outlined text-[22px]">school</span>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-slate-900 text-sm">{edu.schoolName ?? edu.school}</h4>
+                      <p className="text-slate-500 text-sm mt-0.5">{edu.major ?? edu.fieldOfStudy ?? edu.degree}</p>
+                      <p className="text-slate-400 text-xs mt-1.5 font-medium">
+                        {fmtDate(edu.startDate)} {edu.endDate ? `– ${fmtDate(edu.endDate)}` : "– Hiện tại"}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="font-bold text-slate-900 text-sm">{edu.school_name ?? edu.school}</h4>
-                    <p className="text-slate-500 text-sm mt-0.5">{edu.major ?? edu.field_of_study ?? edu.degree}</p>
-                    <p className="text-slate-400 text-xs mt-1.5 font-medium">
-                      {fmtDate(edu.start_date)} {edu.end_date ? `– ${fmtDate(edu.end_date)}` : "– Hiện tại"}
-                    </p>
-                  </div>
-                </div>
-              ))}
+                ))
+              ) : (
+                <p className="text-slate-400 text-sm italic col-span-2">Chưa cập nhật thông tin học vấn</p>
+              )}
             </div>
           </section>
 
-          {/* ── Kỹ năng chuyên môn ── */}
-          <section>
-            <SectionDivider label="KỸ NĂNG CHUYÊN MÔN" />
-            <div className="flex flex-wrap gap-2">
-              {skills.map((skill: string, idx: number) => (
-                <span key={idx} className="px-4 py-2 rounded-xl bg-blue-50 text-blue-700 text-sm font-semibold border border-blue-100">
-                  {skill}
-                </span>
-              ))}
-            </div>
-          </section>
+
 
           {/* Action buttons at the bottom */}
           <div className="pt-6 mt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
@@ -439,8 +344,8 @@ export default function CandidateDetail() {
                     </button>
                   )}
 
-                  {/* Tuyển dụng: Chỉ hiện nếu đang ở trạng thái Interview */}
-                  {currentStatus === 'interview' && (
+                  {/* Tuyển dụng: Hiện nếu là submitted, under_review hoặc interview */}
+                  {(currentStatus === 'submitted' || currentStatus === 'under_review' || currentStatus === 'interview') && (
                     <button
                       onClick={() => handleUpdateStatus("accepted")}
                       className="flex items-center gap-1.5 px-6 py-2 bg-green-600 text-white rounded-xl text-sm font-semibold hover:bg-green-700 shadow-sm transition-colors"
@@ -496,25 +401,15 @@ export default function CandidateDetail() {
             </div>
 
             {/* Simulated CV thumbnail */}
-            <div className="relative aspect-[0.71] bg-white border border-slate-100 rounded-xl overflow-hidden group cursor-pointer shadow-sm mb-4">
-              {/* CV Content Preview */}
-              <div className="p-5 h-full flex flex-col">
-                <div className="text-center mb-4">
-                  <p className="text-[11px] font-black uppercase tracking-widest text-slate-800">{fullName}</p>
-                  <p className="text-[9px] text-blue-600 font-bold uppercase tracking-wider mt-0.5">{headline}</p>
+            <div className="relative aspect-[0.71] bg-slate-50 border border-slate-100 rounded-xl overflow-hidden group cursor-pointer shadow-sm mb-4">
+              <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
+                <div className="w-16 h-16 rounded-2xl bg-red-50 text-red-500 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  <span className="material-symbols-outlined text-4xl">pdf_viewer</span>
                 </div>
-                <div className="w-full h-px bg-slate-200 mb-4"></div>
-                <div className="space-y-2 flex-1">
-                  {[70, 100, 85, 60, 100, 90, 75, 100, 80].map((w, i) => (
-                    <div key={i} className={`h-1.5 rounded-full ${i % 3 === 0 ? "bg-slate-300" : "bg-slate-100"}`} style={{ width: `${w}%` }}></div>
-                  ))}
-                  <div className="pt-3 grid grid-cols-2 gap-2">
-                    {[80, 60, 90, 70].map((w, i) => (
-                      <div key={i} className="h-1.5 rounded-full bg-slate-100" style={{ width: `${w}%` }}></div>
-                    ))}
-                  </div>
-                </div>
-                <p className="text-center text-[8px] text-slate-300 mt-3 italic">Preview mode · Page 1 of 2</p>
+                <p className="text-xs font-bold text-slate-700 uppercase tracking-wider line-clamp-2 px-2">
+                  {app?.resumeUrl?.split('/').pop() || "Resume.pdf"}
+                </p>
+                <p className="text-[10px] text-slate-400 mt-1">PDF Document · 1.2 MB</p>
               </div>
 
               {/* Hover overlay */}
@@ -552,41 +447,22 @@ export default function CandidateDetail() {
             </div>
           </div>
 
-          {/* AI Compatibility */}
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 p-6 text-white shadow-lg">
-            <div className="absolute -bottom-8 -right-8 w-36 h-36 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
-            <span className="material-symbols-outlined absolute top-4 right-4 text-white/40 text-[22px] animate-pulse">auto_awesome</span>
-
-            <h3 className="text-xs font-bold uppercase tracking-widest text-white/80 mb-6 flex items-center gap-2">
-              <span className="material-symbols-outlined text-[18px]">psychology</span>
-              TƯƠNG THÍCH AI
+          {/* Kỹ năng chuyên môn (Moved to Sidebar) */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+            <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-700 mb-4">
+              <span className="material-symbols-outlined text-blue-500 text-[20px]">psychology</span>
+              KỸ NĂNG CHUYÊN MÔN
             </h3>
-
-            {/* Circle Progress */}
-            <div className="flex justify-center mb-6">
-              <div className="relative w-28 h-28">
-                <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                  <circle cx="50" cy="50" r="40" fill="transparent" strokeWidth="8" stroke="rgba(255,255,255,0.2)" />
-                  <circle
-                    cx="50" cy="50" r="40" fill="transparent"
-                    strokeWidth="8" stroke="white" strokeLinecap="round"
-                    strokeDasharray="251.2" strokeDashoffset="20"
-                    className="drop-shadow"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-4xl font-extrabold leading-none">92</span>
-                  <span className="text-xs font-bold text-white/70">%</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="text-center relative z-10">
-              <p className="text-[11px] font-bold uppercase tracking-widest text-white/60 mb-1">EXCELLENT</p>
-              <p className="text-sm text-white/90 leading-relaxed">
-                Ứng viên đáp ứng tuyệt vời các yêu cầu kỹ thuật và kinh nghiệm cho vị trí{" "}
-                <strong className="text-white">{app.title ?? app.job?.title ?? "ứng tuyển"}</strong>.
-              </p>
+            <div className="flex flex-wrap gap-2">
+              {skills.length > 0 ? (
+                skills.map((skill: string, idx: number) => (
+                  <span key={idx} className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 text-[13px] font-bold border border-blue-100 shadow-sm">
+                    {skill}
+                  </span>
+                ))
+              ) : (
+                <p className="text-slate-400 text-sm italic px-1">Chưa cập nhật kỹ năng</p>
+              )}
             </div>
           </div>
         </div>

@@ -53,33 +53,32 @@ interface BenefitItem { icon?: string; title?: string; desc?: string; }
 
 interface ApplicationDetail {
   id: string;
-  job_id: string;
-  user_id: string;
-  cv_url?: string | null;
-  cover_letter?: string | null;
-  status: "submitted" | "under_review" | "interview" | "accepted" | "rejected";
-  note_by_recruiter?: string | null;
-  applied_at: string;
-  updated_at: string;
+  jobId: string;
+  userId: string;
+  resumeUrl?: string | null;
+  coverLetter?: string | null;
+  status: "submitted" | "under_review" | "interview" | "accepted" | "rejected" | "pending";
+  appliedAt: string;
+  updatedAt: string;
   job: {
     id: string;
     title: string;
     description?: string | null;
     requirements?: string | null;
     benefits?: string | null;
-    salary_min?: number | null;
-    salary_max?: number | null;
+    salaryMin?: number | null;
+    salaryMax?: number | null;
     location?: string | null;
-    job_type?: string | null;
-    job_level?: string | null;
+    jobType?: string | null;
+    jobLevel?: string | null;
     deadline?: string | null;
-    views_count?: number;
+    viewsCount?: number;
     company: {
       id: string;
       name: string;
       description?: string | null;
       website?: string | null;
-      logo_url?: string | null;
+      logoUrl?: string | null;
       address?: string | null;
       city?: string | null;
       size?: string | null;
@@ -263,15 +262,15 @@ export default function ApplicationDetailModal({ applicationId, onClose }: Props
                 <span className="text-slate-300 text-xs hidden sm:inline">·</span>
                 <span className="text-xs text-slate-500 flex items-center gap-1">
                   <Calendar className="w-3.5 h-3.5" />
-                  Nộp ngày {formatDate(detail.applied_at)}
+                  Nộp ngày {formatDate(detail.appliedAt)}
                 </span>
                 <span className="text-xs text-slate-400">
-                  · Cập nhật {formatDate(detail.updated_at)}
+                  · Cập nhật {formatDate(detail.updatedAt)}
                 </span>
-                {detail.status === "rejected" && detail.note_by_recruiter && (
+                {detail.status === "rejected" && (
                   <p className="w-full text-xs text-red-700 mt-1">
-                    <span className="font-semibold">Lý do từ chối: </span>
-                    {detail.note_by_recruiter}
+                    <span className="font-semibold">Trạng thái: </span>
+                    Hồ sơ của bạn đã được xem xét.
                   </p>
                 )}
               </div>
@@ -288,7 +287,7 @@ export default function ApplicationDetailModal({ applicationId, onClose }: Props
                     <div className="grid grid-cols-2 gap-x-6 gap-y-2.5 text-sm text-slate-600">
                       <span className="flex items-center gap-1.5">
                         <Banknote className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                        {formatSalary(job.salary_min, job.salary_max)}
+                        {formatSalary(job.salaryMin, job.salaryMax)}
                       </span>
                       <span className="flex items-center gap-1.5">
                         <MapPin className="w-4 h-4 text-slate-400 flex-shrink-0" />
@@ -296,11 +295,11 @@ export default function ApplicationDetailModal({ applicationId, onClose }: Props
                       </span>
                       <span className="flex items-center gap-1.5">
                         <Briefcase className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                        {job.job_type ?? "Toàn thời gian"}
+                        {job.jobType ?? "Toàn thời gian"}
                       </span>
                       <span className="flex items-center gap-1.5">
                         <GraduationCap className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                        {job.job_level ?? "Mọi cấp bậc"}
+                        {job.jobLevel ?? "Mọi cấp bậc"}
                       </span>
                       <span className="flex items-center gap-1.5">
                         <Clock className="w-4 h-4 text-slate-400 flex-shrink-0" />
@@ -343,17 +342,17 @@ export default function ApplicationDetailModal({ applicationId, onClose }: Props
                     <div className="px-5 py-4 space-y-4">
                       <div>
                         <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Thư xin việc</p>
-                        {detail.cover_letter ? (
-                          <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">{detail.cover_letter}</p>
+                        {detail.coverLetter ? (
+                          <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">{detail.coverLetter}</p>
                         ) : (
                           <p className="text-sm text-slate-400 italic">Bạn chưa viết thư xin việc.</p>
                         )}
                       </div>
-                      {detail.cv_url && (
+                      {detail.resumeUrl && (
                         <div>
                           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">CV đính kèm</p>
                           <a
-                            href={detail.cv_url}
+                            href={detail.resumeUrl}
                             target="_blank"
                             rel="noreferrer"
                             className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#1e3fae]/5 border border-[#1e3fae]/20 rounded-xl text-sm font-semibold text-[#1e3fae] hover:bg-[#1e3fae]/10 transition"
@@ -378,7 +377,7 @@ export default function ApplicationDetailModal({ applicationId, onClose }: Props
                     {/* Logo + name */}
                     <div className="flex items-center gap-3 mb-4">
                       <div className="size-12 rounded-xl border border-slate-100 bg-white flex items-center justify-center overflow-hidden p-1.5 flex-shrink-0">
-                        <CompanyLogo logo={company?.logo_url} name={company?.name} />
+                        <CompanyLogo logo={company?.logoUrl} name={company?.name} />
                       </div>
                       <div>
                         <p className="font-bold text-slate-900 text-sm">{company?.name ?? "—"}</p>

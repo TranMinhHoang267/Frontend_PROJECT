@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   Loader2, Search, Mail, Calendar, 
@@ -33,11 +33,7 @@ export default function CandidatesManager() {
   const [stats, setStats] = useState<Record<string, number>>({});
   const navigate = useNavigate();
 
-  useEffect(() => {
-    fetchApplicants();
-  }, [activeTab]);
-
-  const fetchApplicants = async () => {
+  const fetchApplicants = useCallback(async () => {
     setLoading(true);
     try {
       const statusParam = activeTab === "all" ? undefined : activeTab;
@@ -59,18 +55,24 @@ export default function CandidatesManager() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeTab]);
+
+  useEffect(() => {
+    fetchApplicants();
+  }, [activeTab, fetchApplicants]);
 
   const filteredApplicants = applicants.filter(app => {
-    const fullName = app.candidate?.full_name || `${app.candidate?.first_name || ''} ${app.candidate?.last_name || ''}`;
+    const fullName = app.candidate?.fullName || `${app.candidate?.firstName || ''} ${app.candidate?.lastName || ''}`;
     return fullName.toLowerCase().includes(search.toLowerCase()) || 
            (app.title || app.job?.title || "").toLowerCase().includes(search.toLowerCase());
   });
 
   const handleViewProfile = (app: EmployerApplication) => {
+    // Ưu tiên applicationId (UUID), sau đó là id, sau đó là application_id (fallback)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const appAny = app as any;
-    const currId = appAny.application_id || appAny.id || appAny._id || "unknown";
+    const currId = app.applicationId || app.id || appAny.application_id || "unknown";
+    console.log("[CandidatesManager] Navigating to profile with ID:", currId, "Data:", app);
     navigate(`/recruiter/candidates/${currId}`, { state: { initialApp: app } });
   };
 
@@ -167,16 +169,16 @@ export default function CandidatesManager() {
               ) : (
                 filteredApplicants.map((app) => {
                   const status = STATUS_CONFIG[app.status] || { label: app.status, classes: "bg-slate-100 text-slate-600 border-slate-200", dot: "bg-slate-400" };
-                  const fullName = app.candidate?.full_name || `${app.candidate?.first_name || 'N'} ${app.candidate?.last_name || 'A'}`;
+                  const fullName = app.candidate?.fullName || `${app.candidate?.firstName || 'N'} ${app.candidate?.lastName || 'A'}`;
                   
-                  const avatarSrc = app.candidate?.avatar_url 
-                    ? (app.candidate.avatar_url.startsWith("http") 
-                        ? app.candidate.avatar_url 
-                        : `${(import.meta.env.VITE_API_BASE_URL || "").replace(/\/api\/?$/, "")}${app.candidate.avatar_url.startsWith("/") ? "" : "/"}${app.candidate.avatar_url}`)
+                  const avatarSrc = app.candidate?.avatarUrl 
+                    ? (app.candidate.avatarUrl.startsWith("http") 
+                        ? app.candidate.avatarUrl 
+                        : `${(import.meta.env.VITE_API_BASE_URL || "").replace(/\/api\/?$/, "")}${app.candidate.avatarUrl.startsWith("/") ? "" : "/"}${app.candidate.avatarUrl}`)
                     : null;
 
                   return (
-                    <tr key={app.application_id || app.id} className="group hover:bg-slate-50/50 transition-colors">
+                    <tr key={app.applicationId || app.id} className="group hover:bg-slate-50/50 transition-colors">
                       <td className="py-4 px-6">
                         <div className="flex items-center gap-3">
                           <div className="size-11 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center flex-shrink-0">
@@ -201,7 +203,7 @@ export default function CandidatesManager() {
                         </div>
                       </td>
                       <td className="py-4 px-6 text-sm text-slate-500 font-medium">
-                        {app.applied_at ? new Date(app.applied_at).toLocaleDateString('vi-VN') : "---"}
+                        {app.appliedAt ? new Date(app.appliedAt).toLocaleDateString('vi-VN') : "---"}
                       </td>
                       <td className="py-4 px-6">
                         <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[10px] font-black tracking-wider border ${status.classes}`}>

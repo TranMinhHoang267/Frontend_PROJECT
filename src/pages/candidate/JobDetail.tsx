@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import {
   MapPin, Banknote, Briefcase, Clock, ChevronRight, Bookmark,
-  Building2, Send, ExternalLink, Loader2, AlertCircle, Info,
-  
+  Building2, Send, ExternalLink, Loader2, AlertCircle,
   Gift, Shield, GraduationCap, Coffee, Star, Zap, Heart, Users
 } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -115,8 +114,8 @@ function parseTextToList(text?: string | null): string[] {
     // not JSON
   }
   return text
-    .split(/\n|[•-]/)
-    .map((s) => s.trim())
+    .split(/\n/)
+    .map((s) => s.trim().replace(/^[•-]\s*/, ""))
     .filter(Boolean);
 }
 
@@ -259,7 +258,7 @@ export default function JobDetail() {
         {/* Breadcrumb */}
         <div className="flex items-center text-sm text-slate-500 mb-6">
           <Link to="/candidate/recommended" className="hover:text-blue-600">
-            Việc làm
+            Xem chi tiết
           </Link>
           <ChevronRight className="w-4 h-4 mx-1" />
           <span className="text-slate-900 font-semibold">{job.title}</span>
@@ -470,34 +469,42 @@ export default function JobDetail() {
 
                   {intro && (
                     <div>
-                      <h4 className="flex items-center gap-2 text-sm font-bold text-slate-800 mb-2">
-                        <div className="bg-orange-50 p-1.5 rounded-lg">
-                          <Info className="w-4 h-4 text-orange-500" />
-                        </div>
+                      <h4 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
+                        <span className="w-1 h-4 bg-orange-500 rounded-full inline-block" />
                         Giới thiệu công ty
                       </h4>
-                      <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-wrap">{intro}</p>
+                      <ul className="space-y-2 text-[13px] text-slate-600 leading-relaxed list-none pl-1">
+                        {parseTextToList(intro).map((line, i) => (
+                          <li key={i} className="flex items-start gap-2">
+                            <span className="mt-1.5 size-1 rounded-full bg-orange-400 flex-shrink-0" />
+                            {line}
+                          </li>
+                        ))}
+                      </ul>
                     </div>
                   )}
 
                   {culture && (
                     <div>
-                      <h4 className="flex items-center gap-2 text-sm font-bold text-slate-800 mb-2">
-                        <div className="bg-red-50 p-1.5 rounded-lg">
-                          <Heart className="w-4 h-4 text-red-500" />
-                        </div>
+                      <h4 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
+                        <span className="w-1 h-4 bg-red-500 rounded-full inline-block" />
                         Văn hóa doanh nghiệp
                       </h4>
-                      <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-wrap">{culture}</p>
+                      <ul className="space-y-2 text-[13px] text-slate-600 leading-relaxed list-none pl-1">
+                        {parseTextToList(culture).map((line, i) => (
+                          <li key={i} className="flex items-start gap-2">
+                            <span className="mt-1.5 size-1 rounded-full bg-red-400 flex-shrink-0" />
+                            {line}
+                          </li>
+                        ))}
+                      </ul>
                     </div>
                   )}
 
                   {companyBenefits.length > 0 && (
                     <div>
-                      <h4 className="flex items-center gap-2 text-sm font-bold text-slate-800 mb-3">
-                        <div className="bg-yellow-50 p-1.5 rounded-lg">
-                          <Gift className="w-4 h-4 text-yellow-600" />
-                        </div>
+                      <h4 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
+                        <span className="w-1 h-4 bg-yellow-500 rounded-full inline-block" />
                         Phúc lợi
                       </h4>
                       <div className="grid grid-cols-2 gap-2">

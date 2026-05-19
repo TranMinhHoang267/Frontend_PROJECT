@@ -113,11 +113,11 @@ export default function RecruiterJobDetail() {
     <div className="max-w-4xl mx-auto py-8 px-6 md:px-10 font-display text-slate-900 relative">
       {/* Back */}
       <button
-        onClick={() => navigate("/recruiter/jobs")}
+        onClick={() => navigate(-1)}
         className="flex items-center gap-2 text-slate-500 hover:text-slate-800 text-sm font-semibold mb-6 transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
-        Quay lại quản lý công việc
+        Quay lại
       </button>
 
       {/* ── Header card ── */}

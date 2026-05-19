@@ -54,7 +54,7 @@ export default function ApplyJob() {
         const fetchedCvs = await resumeService.getAll();
         setCvs(fetchedCvs);
         if (fetchedCvs.length > 0) {
-          const defaultCv = fetchedCvs.find((cv: CvFile) => cv.is_default) || fetchedCvs[0];
+          const defaultCv = fetchedCvs.find((cv: CvFile) => cv.isDefault) || fetchedCvs[0];
           setSelectedCvId(defaultCv.id);
         }
 
@@ -88,12 +88,12 @@ export default function ApplyJob() {
     
     setSubmitting(true);
     try {
-      const payload: Record<string, unknown> = {
-        job_id: isNaN(Number(jobId)) ? jobId : Number(jobId),
-        resume_id: isNaN(Number(selectedCvId)) ? selectedCvId : Number(selectedCvId),
-        cover_letter: coverLetter
+      const payload = {
+        jobId: String(jobId),
+        resumeId: String(selectedCvId),
+        coverLetter: coverLetter
       };
-      await applicationService.apply(payload as typeof payload & { job_id: string });
+      await applicationService.apply(payload);
       alert("Nộp đơn thành công!");
       navigate('/candidate'); // Redirect to dashboard or application history
     } catch (err: unknown) {
@@ -202,13 +202,13 @@ export default function ApplyJob() {
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-slate-900">{cv.file_name || "CV_NguyenVanA.pdf"}</span>
-                        {cv.is_default && (
+                        <span className="font-bold text-slate-900">{cv.title || "CV_NguyenVanA.pdf"}</span>
+                        {cv.isDefault && (
                           <span className="bg-[#1e3fae] text-white text-[10px] font-bold px-2 py-0.5 rounded-md">MẶC ĐỊNH</span>
                         )}
                       </div>
                       <p className="text-xs text-slate-500 mt-1">
-                        Cập nhật {cv.created_at ? new Date(cv.created_at).toLocaleDateString("vi-VN") : "gần đây"} • {cv.file_size || '1.2 MB'}
+                        Cập nhật {cv.createdAt ? new Date(cv.createdAt).toLocaleDateString("vi-VN") : "gần đây"}
                       </p>
                     </div>
                   </div>

@@ -86,7 +86,7 @@ export const jobService = {
   },
 
   // GET /api/public/jobs (lấy danh sách việc làm công khai cho sidebar "Việc làm tương tự")
-  getPublicJobsList: async (params?: { company_id?: number | string; limit?: number; search?: string }) => {
+  getPublicJobsList: async (params?: { companyId?: number | string; limit?: number; search?: string }) => {
     const res = await apiClient.get('/public/jobs', { params });
     return res.data?.data ?? res.data ?? [];
   },

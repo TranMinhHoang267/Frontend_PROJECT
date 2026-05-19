@@ -1,30 +1,35 @@
 import { apiClient } from '../config/axios';
 
 export interface Application {
-  id: string;                    // ✅ UUID string, không phải number
-  cover_letter?: string | null;
-  note_by_recruiter?: string | null;
-  cv_url?: string | null;
-  status: 'submitted' | 'under_review' | 'interview' | 'accepted' | 'rejected';
-  applied_at: string;            
+  id: string;
+  jobId: string;
+  userId: string;
+  companyId?: string | null;
+  fullName: string;
+  email: string;
+  phone: string;
+  resumeUrl: string;
+  coverLetter?: string | null;
+  status: 'submitted' | 'under_review' | 'interview' | 'accepted' | 'rejected' | 'pending';
+  appliedAt: string;            
   updatedAt?: string;
   job?: {
-    id: string;                  //   ✅ UUID string
+    id: string;
     title: string;
     location: string | null;
-    job_type?: string | null;
-    salary_min?: number | null;
-    salary_max?: number | null;
+    jobType?: string | null;
+    salaryMin?: number | null;
+    salaryMax?: number | null;
     deadline?: string | null;
     company?: {
       name: string;
-      logo_url?: string | null;
+      logoUrl?: string | null;
     };
   };
 }
 
 export const applicationService = {
-  apply: async (data: { job_id: string; cover_letter?: string }) => {
+  apply: async (data: { jobId: string; resumeId?: string; coverLetter?: string }) => {
     const res = await apiClient.post('/applications', data);
     return res.data;
   },

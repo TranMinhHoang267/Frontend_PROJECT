@@ -30,6 +30,32 @@ export interface UpdateCompanyPayload {
   size?: string;
 }
 
+export interface DashboardStats {
+  jobs: {
+    total: number;
+    pending: number;
+    approved: number;
+    rejected: number;
+    paused: number;
+  };
+  applications: {
+    total: number;
+    submitted: number;
+    under_review: number;
+    interview: number;
+    accepted: number;
+    rejected: number;
+  };
+  successRate: string;
+  recentApplications: Array<{
+    id: string;
+    status: string;
+    appliedAt: string;
+    candidate: { fullName: string; email: string; avatarUrl: string | null };
+    jobTitle: string;
+  }>;
+}
+
 export const employerService = {
   getProfile: async (): Promise<CompanyProfileData> => {
     const res = await apiClient.get('/employer/profile');
@@ -58,5 +84,10 @@ export const employerService = {
     if (url.startsWith('http')) return url;
     const baseUrl = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/api\/?$/, '');
     return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
+  },
+
+  getDashboard: async (): Promise<DashboardStats> => {
+    const res = await apiClient.get('/employer/dashboard');
+    return res.data?.data ?? res.data;
   }
 };

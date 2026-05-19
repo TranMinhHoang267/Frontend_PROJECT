@@ -259,7 +259,7 @@ export default function CandidateDashboard() {
                           <div className="flex items-center gap-3">
                             <div className="size-10 rounded-lg bg-white border border-slate-200 flex items-center justify-center overflow-hidden flex-shrink-0 p-1">
                               <CompanyLogo
-                                logo={app.job?.company?.logo_url}
+                                logo={app.job?.company?.logoUrl}
                                 name={app.job?.company?.name}
                               />
                             </div>
@@ -282,7 +282,7 @@ export default function CandidateDashboard() {
 
                         {/* Date */}
                         <td className="px-6 py-4 text-slate-500 font-medium whitespace-nowrap">
-                          {app.applied_at ? new Date(app.applied_at).toLocaleDateString("vi-VN", {
+                          {app.appliedAt ? new Date(app.appliedAt).toLocaleDateString("vi-VN", {
                             day: "2-digit",
                             month: "short",
                             year: "numeric",
@@ -371,7 +371,7 @@ export default function CandidateDashboard() {
                   {/* Company Logo in Header */}
                   <div className="size-14 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center overflow-hidden p-2 flex-shrink-0 shadow-sm">
                     <CompanyLogo
-                      logo={selectedApp.job?.company?.logo_url}
+                      logo={selectedApp.job?.company?.logoUrl}
                       name={selectedApp.job?.company?.name}
                     />
                   </div>
@@ -394,7 +394,7 @@ export default function CandidateDashboard() {
                         {STATUS_LABEL[selectedApp.status]}
                       </span>
                       <span className="text-[11px] text-slate-400 font-medium">
-                        Cập nhật: {new Date(selectedApp.updatedAt || selectedApp.applied_at || Date.now()).toLocaleDateString("vi-VN")}
+                        Cập nhật: {new Date(selectedApp.updatedAt || selectedApp.appliedAt || Date.now()).toLocaleDateString("vi-VN")}
                       </span>
                     </div>
                   </div>
@@ -434,8 +434,8 @@ export default function CandidateDashboard() {
 
                     let dateStr = "Sắp tới";
                     if (step === "applied") {
-                      dateStr = selectedApp.applied_at
-                        ? new Date(selectedApp.applied_at).toLocaleDateString("vi-VN", {
+                      dateStr = selectedApp.appliedAt
+                        ? new Date(selectedApp.appliedAt).toLocaleDateString("vi-VN", {
                             day: "2-digit",
                             month: "short",
                           })
@@ -497,14 +497,15 @@ export default function CandidateDashboard() {
               </div>
 
               {/* Recruiter rejection note */}
-              {selectedApp.status === "rejected" && selectedApp.note_by_recruiter && (
+              {/* Recruiter rejection note - Placeholder if needed later */}
+              {selectedApp.status === "rejected" && (
                 <div className="mt-8 p-4 bg-red-50 border border-red-100 rounded-xl relative overflow-hidden">
                   <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-400 rounded-l-xl" />
                   <h3 className="text-sm font-bold text-red-800 mb-1 pl-2">
-                    Phản hồi từ Nhà tuyển dụng
+                    Thông tin phản hồi
                   </h3>
                   <p className="text-sm text-red-600 pl-2">
-                    {selectedApp.note_by_recruiter}
+                    Hồ sơ của bạn đã được xem xét nhưng rất tiếc chưa phù hợp ở thời điểm này.
                   </p>
                 </div>
               )}
