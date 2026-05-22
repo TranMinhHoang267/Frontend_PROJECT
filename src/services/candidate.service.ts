@@ -86,4 +86,16 @@ export const candidateService = {
     });
     await apiClient.delete('/candidate/profile', { data: { fields: beFields } });
   },
+
+  // GET /api/bookmarks
+  getBookmarks: async (params?: { page?: number; limit?: number }) => {
+    const res = await apiClient.get('/bookmarks', { params });
+    return res.data?.data ?? res.data ?? { bookmarks: [], total_items: 0, total_pages: 0, current_page: 1 };
+  },
+
+  // POST /api/bookmarks/:jobId
+  toggleBookmark: async (jobId: string | number) => {
+    const res = await apiClient.post(`/bookmarks/${jobId}`);
+    return res.data;
+  },
 };

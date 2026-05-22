@@ -155,10 +155,19 @@ export default function CompanyProfile() {
   const saveProfile = async () => {
     try {
       setIsSaving(true);
+
+      // Tự động gộp phúc lợi đang nhập dở (nếu có) vào danh sách
+      const finalBenefits = [...benefits];
+      if (newBenefit.title.trim()) {
+        finalBenefits.push(newBenefit);
+        setBenefits(finalBenefits);
+        setNewBenefit({ icon: "gift", title: "", desc: "" });
+      }
+
       // Ghép intro + văn hóa + phúc lợi
       let combined = (formData.description || "").trimEnd();
       if (cultureText.trim()) combined += CULTURE_SEP + cultureText.trim();
-      if (benefits.length > 0) combined += BENEFITS_SEP + serializeBenefits(benefits);
+      if (finalBenefits.length > 0) combined += BENEFITS_SEP + serializeBenefits(finalBenefits);
 
       const updated = await employerService.updateProfile({ ...formData, description: combined });
       setProfile(updated);

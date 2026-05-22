@@ -14,6 +14,7 @@ import { useAuthStore } from "../../stores/authStore";
 import { applicationService } from "../../services/application.service";
 import type { Application } from "../../services/application.service";
 import { employerService } from "../../services/employer.service";
+import { candidateService } from "../../services/candidate.service";
 import ApplicationDetailModal from "./ApplicationDetailModal";
 
 // ─── 5 trạng thái hợp lệ theo backend ───────────────────────────────────────
@@ -91,14 +92,19 @@ export default function CandidateDashboard() {
   
   // Modal state
   const [detailModalId, setDetailModalId] = useState<string | null>(null);
+  const [savedCount, setSavedCount] = useState<number>(0);
 
-  const fetchApps = async () => {
+  const fetchDashboardData = async () => {
     setLoading(true);
     try {
-      const data = await applicationService.getApplications();
-      const list = (Array.isArray(data) ? data : []) as Application[];
+      const [appData, bookmarkData] = await Promise.all([
+        applicationService.getApplications(),
+        candidateService.getBookmarks({ limit: 1 })
+      ]);
+      const list = (Array.isArray(appData) ? appData : []) as Application[];
       setApps(list);
       if (list.length > 0) setSelectedApp(list[0]);
+      setSavedCount(bookmarkData.total_items || 0);
     } catch (e) {
       console.error("Dashboard load error:", e);
     } finally {
@@ -107,7 +113,7 @@ export default function CandidateDashboard() {
   };
 
   useEffect(() => {
-    fetchApps();
+    fetchDashboardData();
   }, []);
 
   const handleDeleteRejected = async (id: string) => {
@@ -115,7 +121,7 @@ export default function CandidateDashboard() {
     try {
       await applicationService.deleteRejectedApplication(id);
       // Refresh list
-      fetchApps();
+      fetchDashboardData();
       setOpenMenuId(null);
     } catch (error) {
       console.error("Lỗi khi xóa đơn ứng tuyển:", error);
@@ -136,6 +142,7 @@ export default function CandidateDashboard() {
       Icon: FileText,
       iconBg: "bg-blue-50",
       iconColor: "text-[#1e3fae]",
+      onClick: () => navigate("/candidate/applications"),
     },
     {
       label: "Đang phỏng vấn",
@@ -145,15 +152,17 @@ export default function CandidateDashboard() {
       Icon: MessageSquare,
       iconBg: "bg-violet-50",
       iconColor: "text-violet-500",
+      onClick: () => navigate("/candidate/applications"),
     },
     {
       label: "Việc làm đã lưu",
-      value: 0,
-      sub: "Cập nhật 2 giờ trước",
+      value: savedCount,
+      sub: "Xem chi tiết",
       subColor: "text-slate-400",
       Icon: Bookmark,
       iconBg: "bg-orange-50",
       iconColor: "text-orange-500",
+      onClick: () => navigate("/candidate/saved"),
     },
   ];
 
@@ -187,7 +196,8 @@ export default function CandidateDashboard() {
             {stats.map((s) => (
               <div
                 key={s.label}
-                className="bg-white rounded-2xl border border-slate-200 p-6 hover:shadow-md transition-shadow"
+                onClick={s.onClick}
+                className="bg-white rounded-2xl border border-slate-200 p-6 hover:shadow-md transition-shadow cursor-pointer"
               >
                 <div className="flex items-start justify-between mb-5">
                   <div

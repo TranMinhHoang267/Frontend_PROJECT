@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
-import { Outlet, useNavigate } from "react-router-dom";
-import { Camera, Loader2 } from "lucide-react";
+import { Outlet, useNavigate, NavLink } from "react-router-dom";
+import { Camera, Loader2, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { useAuthStore } from "../stores/authStore";
 import { avatarService } from "../services/avatar.service";
 import { authService } from "../services/auth.service";
@@ -13,8 +13,17 @@ export default function RecruiterLayout() {
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  const navItems = [
+    { to: '/recruiter', label: 'Bảng điều khiển', icon: 'dashboard', end: true },
+    { to: '/recruiter/jobs', label: 'Quản lý công việc', icon: 'work', end: false },
+    { to: '/recruiter/candidates', label: 'Ứng viên', icon: 'group', end: false },
+    { to: '/recruiter/post-job', label: 'Đăng tin tuyển dụng', icon: 'add_box', end: false },
+    { to: '/recruiter/company-profile', label: 'Hồ sơ công ty', icon: 'apartment', end: false },
+  ];
 
   // Đóng dropdown khi click ra ngoài
   useEffect(() => {
@@ -78,49 +87,58 @@ export default function RecruiterLayout() {
   return (
     <div className="relative flex min-h-screen w-full overflow-x-hidden bg-[#f6f6f8] text-slate-900 font-display">
       {/* Sidebar */}
-      <aside className="flex w-72 flex-col border-r border-slate-200 bg-white h-screen sticky top-0 hidden md:flex">
-        <div className="flex items-center gap-3 px-8 py-6 border-b border-slate-100">
-          <div className="flex size-8 items-center justify-center rounded-lg bg-[#1e3fae] text-white">
+      <aside className={`flex flex-col border-r border-slate-200 bg-white h-screen sticky top-0 hidden md:flex transition-all duration-300 ease-in-out ${isSidebarCollapsed ? 'w-[88px]' : 'w-64'}`}>
+        <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center px-0' : 'gap-3 px-6'} py-5 border-b border-slate-100 transition-all duration-300`}>
+          <div className="flex size-8 items-center justify-center rounded-lg bg-[#1e3fae] text-white flex-shrink-0">
             <span className="material-symbols-outlined text-xl">work</span>
           </div>
-          <h2 className="text-lg font-bold tracking-tight">Recruiter Pro</h2>
+          {!isSidebarCollapsed && <h2 className="text-lg font-bold tracking-tight whitespace-nowrap">Recruiter</h2>}
         </div>
         
-        <div className="flex flex-col gap-1 p-4 grow">
-          <div className="px-4 py-2">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Điều hướng</h3>
-          </div>
-          <a className="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors" href="/recruiter">
-            <span className="material-symbols-outlined">dashboard</span>
-            <span className="text-sm font-medium">Bảng điều khiển</span>
-          </a>
-          <a className="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors" href="/recruiter/jobs">
-            <span className="material-symbols-outlined">work</span>
-            <span className="text-sm font-medium">Quản lý công việc</span>
-          </a>
-          <a className="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors" href="/recruiter/candidates">
-            <span className="material-symbols-outlined">group</span>
-            <span className="text-sm font-medium">Ứng viên</span>
-          </a>
-          <a className="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors" href="/recruiter/post-job">
-            <span className="material-symbols-outlined">add_box</span>
-            <span className="text-sm font-medium">Đăng tin tuyển dụng</span>
-          </a>
-          <a className="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors" href="/recruiter/company-profile">
-            <span className="material-symbols-outlined">apartment</span>
-            <span className="text-sm font-medium">Hồ sơ công ty</span>
-          </a>
-        </div>
+        <nav className="flex flex-col gap-1.5 p-4 grow overflow-y-auto overflow-x-hidden">
+          {!isSidebarCollapsed && (
+            <div className="px-3 pt-2 pb-3">
+              <h3 className="text-[11px] font-bold uppercase tracking-widest text-slate-400 whitespace-nowrap">Điều hướng</h3>
+            </div>
+          )}
+          {navItems.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.end}
+              title={isSidebarCollapsed ? item.label : undefined}
+              className={({ isActive }) =>
+                `flex items-center ${isSidebarCollapsed ? 'justify-center px-0' : 'gap-3.5 px-3.5'} py-3 rounded-xl text-[15px] font-medium transition-all duration-200 group ${
+                  isActive
+                    ? 'bg-[#1e3fae]/10 text-[#1e3fae] font-bold shadow-sm'
+                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+                }`
+              }
+            >
+              <span className={`material-symbols-outlined transition-transform duration-300 group-hover:scale-110 ${isSidebarCollapsed ? 'text-[24px]' : 'text-[22px]'}`}>{item.icon}</span>
+              {!isSidebarCollapsed && <span className="whitespace-nowrap">{item.label}</span>}
+            </NavLink>
+          ))}
+        </nav>
       </aside>
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <header className="flex h-16 items-center justify-between border-b border-slate-200 bg-white px-8 sticky top-0 z-10 w-full">
-          <div className="flex-1 max-w-xl">
-            <div className="relative group">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#1e3fae] transition-colors">search</span>
-              <input className="w-full h-10 pl-10 pr-4 rounded-lg border-slate-200 bg-slate-50 focus:ring-2 focus:ring-[#1e3fae]/20 focus:border-[#1e3fae] transition-all text-sm outline-none" placeholder="Tìm kiếm ứng viên, vị trí..." type="text"/>
+        <header className="flex h-16 items-center justify-between border-b border-slate-200 bg-white px-4 md:px-6 sticky top-0 z-10 w-full transition-all duration-300">
+          <div className="flex items-center gap-4 flex-1">
+            <button 
+              onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+              className="p-2 -ml-2 rounded-xl text-slate-400 hover:text-[#1e3fae] hover:bg-blue-50 transition-colors hidden md:flex items-center justify-center focus:outline-none"
+              title={isSidebarCollapsed ? "Mở rộng menu" : "Thu gọn menu"}
+            >
+              {isSidebarCollapsed ? <PanelLeftOpen className="w-5 h-5" /> : <PanelLeftClose className="w-5 h-5" />}
+            </button>
+            <div className="max-w-xl w-full hidden sm:block">
+              <div className="relative group">
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#1e3fae] transition-colors">search</span>
+                <input className="w-full h-10 pl-10 pr-4 rounded-lg border-slate-200 bg-slate-50 focus:ring-2 focus:ring-[#1e3fae]/20 focus:border-[#1e3fae] transition-all text-sm outline-none" placeholder="Tìm kiếm ứng viên, vị trí..." type="text"/>
+              </div>
             </div>
           </div>
 
@@ -138,13 +156,13 @@ export default function RecruiterLayout() {
                   <span className="text-white font-bold text-sm">{user?.fullName?.charAt(0) ?? "R"}</span>
                 )}
               </div>
-              <div className="flex flex-col items-start">
+              <div className="flex flex-col items-start hidden sm:flex">
                 <p className="text-sm font-bold text-slate-900 leading-tight truncate max-w-[140px]">
                   {user?.fullName ?? "Nhà tuyển dụng"}
                 </p>
                 <p className="text-[11px] text-slate-400 leading-tight">Nhà tuyển dụng</p>
               </div>
-              <span className="material-symbols-outlined text-slate-400 text-lg ml-1">expand_more</span>
+              <span className="material-symbols-outlined text-slate-400 text-lg ml-1 hidden sm:block">expand_more</span>
             </button>
 
             {/* Dropdown menu */}

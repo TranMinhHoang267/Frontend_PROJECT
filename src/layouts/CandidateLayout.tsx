@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Outlet, useNavigate, NavLink } from "react-router-dom";
-import { Bell, LogOut, User, ChevronDown, Camera, Loader2 } from "lucide-react";
+import { Bell, LogOut, User, ChevronDown, Camera, Loader2, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { useAuthStore } from "../stores/authStore";
 import { avatarService } from "../services/avatar.service";
 import { authService } from "../services/auth.service";
@@ -12,6 +12,7 @@ export default function CandidateLayout() {
   const updateAvatar = useAuthStore(state => state.updateAvatar);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
@@ -84,35 +85,36 @@ export default function CandidateLayout() {
   return (
     <div className="font-display min-h-screen bg-[#f6f6f8] flex">
       {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-slate-200 hidden md:flex flex-col sticky top-0 h-screen">
+      <aside className={`bg-white border-r border-slate-200 hidden md:flex flex-col sticky top-0 h-screen transition-all duration-300 ease-in-out ${isSidebarCollapsed ? 'w-[88px]' : 'w-64'}`}>
         {/* Logo */}
-        <div className="flex items-center gap-3 px-6 py-5 border-b border-slate-100">
-          <div className="text-[#1e3fae]">
+        <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center px-0' : 'gap-3 px-6'} py-5 border-b border-slate-100 transition-all duration-300`}>
+          <div className="text-[#1e3fae] flex-shrink-0">
             <svg className="size-7" fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
               <path d="M44 11.2727C44 14.0109 39.8386 16.3957 33.69 17.6364C39.8386 18.877 44 21.2618 44 24C44 26.7382 39.8386 29.123 33.69 30.3636C39.8386 31.6043 44 33.9891 44 36.7273C44 40.7439 35.0457 44 24 44C12.9543 44 4 40.7439 4 36.7273C4 33.9891 8.16144 31.6043 14.31 30.3636C8.16144 29.123 4 26.7382 4 24C4 21.2618 8.16144 18.877 14.31 17.6364C8.16144 16.3957 4 14.0109 4 11.2727C4 7.25611 12.9543 4 24 4C35.0457 4 44 7.25611 44 11.2727Z" fill="currentColor"></path>
             </svg>
           </div>
-          <span className="font-bold text-lg text-slate-900 tracking-tight">RecruitHub</span>
+          {!isSidebarCollapsed && <span className="font-bold text-lg text-slate-900 tracking-tight whitespace-nowrap">Candidate</span>}
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
-          <p className="px-3 pt-3 pb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">Điều hướng</p>
+        <nav className="flex-1 p-4 space-y-1.5 overflow-y-auto overflow-x-hidden">
+          {!isSidebarCollapsed && <p className="px-3 pt-2 pb-3 text-[11px] font-bold uppercase tracking-widest text-slate-400 whitespace-nowrap">Điều hướng</p>}
           {navItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
               end={item.end}
+              title={isSidebarCollapsed ? item.label : undefined}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                `flex items-center ${isSidebarCollapsed ? 'justify-center px-0' : 'gap-3.5 px-3.5'} py-3 rounded-xl text-[15px] font-medium transition-all duration-200 group ${
                   isActive
-                    ? 'bg-[#1e3fae]/10 text-[#1e3fae] font-semibold'
-                    : 'text-slate-600 hover:bg-slate-50'
+                    ? 'bg-[#1e3fae]/10 text-[#1e3fae] font-bold shadow-sm'
+                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
                 }`
               }
             >
-              <span className="material-symbols-outlined text-[20px]">{item.icon}</span>
-              {item.label}
+              <span className={`material-symbols-outlined transition-transform duration-300 group-hover:scale-110 ${isSidebarCollapsed ? 'text-[24px]' : 'text-[22px]'}`}>{item.icon}</span>
+              {!isSidebarCollapsed && <span className="whitespace-nowrap">{item.label}</span>}
             </NavLink>
           ))}
         </nav>
@@ -121,9 +123,18 @@ export default function CandidateLayout() {
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0">
         {/* ===== Topbar ===== */}
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 sticky top-0 z-30">
-          <div className="text-sm font-semibold text-slate-700">
-            Xin chào, <span className="text-[#1e3fae]">{user?.fullName || 'Ứng viên'}!</span>
+        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-6 sticky top-0 z-30 transition-all duration-300">
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+              className="p-2 -ml-2 rounded-xl text-slate-400 hover:text-[#1e3fae] hover:bg-blue-50 transition-colors hidden md:flex items-center justify-center focus:outline-none"
+              title={isSidebarCollapsed ? "Mở rộng menu" : "Thu gọn menu"}
+            >
+              {isSidebarCollapsed ? <PanelLeftOpen className="w-5 h-5" /> : <PanelLeftClose className="w-5 h-5" />}
+            </button>
+            <div className="text-[15px] font-bold text-slate-700 hidden sm:block">
+              Xin chào, <span className="text-[#1e3fae]">{user?.fullName || 'Ứng viên'}!</span>
+            </div>
           </div>
 
           <div className="flex items-center gap-3">

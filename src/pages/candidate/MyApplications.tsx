@@ -81,7 +81,7 @@ function ApplicationCard({ app, onWithdraw, onDeleteRejected, onViewDetail }: {
         {/* Cột trái: Logo + Thông tin chính */}
         <div className="flex items-center gap-4 flex-1 min-w-0">
           <div className="size-12 rounded-xl border border-slate-100 bg-white shadow-sm flex items-center justify-center flex-shrink-0 overflow-hidden p-1">
-            <CompanyLogo logo={app.job?.company?.logo_url} name={app.job?.company?.name} />
+            <CompanyLogo logo={app.job?.company?.logoUrl} name={app.job?.company?.name} />
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-3">
@@ -100,7 +100,7 @@ function ApplicationCard({ app, onWithdraw, onDeleteRejected, onViewDetail }: {
               </div>
               <div className="flex items-center gap-1 border-l border-slate-200 pl-3 text-emerald-600 font-bold">
                 <Banknote className="w-3 h-3 flex-shrink-0" />
-                <span>{formatSalary(app.job?.salary_min ?? null, app.job?.salary_max ?? null)}</span>
+                <span>{formatSalary(app.job?.salaryMin ?? null, app.job?.salaryMax ?? null)}</span>
               </div>
               {app.job?.location && (
                 <div className="flex items-center gap-1 border-l border-slate-200 pl-3">
@@ -110,7 +110,7 @@ function ApplicationCard({ app, onWithdraw, onDeleteRejected, onViewDetail }: {
               )}
               <div className="flex items-center gap-1 border-l border-slate-200 pl-3">
                 <Calendar className="w-3 h-3 flex-shrink-0" />
-                <span>Nộp {formatRelativeTime(app.applied_at)}</span>
+                <span>Nộp {formatRelativeTime(app.appliedAt)}</span>
               </div>
             </div>
           </div>

@@ -17,6 +17,7 @@ import RecommendedJobs from "../pages/candidate/RecommendedJobs";
 import ApplyJob from "../pages/candidate/ApplyJob";
 import JobDetail from "../pages/candidate/JobDetail";
 import MyApplications from "../pages/candidate/MyApplications";
+import SavedJobs from "../pages/candidate/SavedJobs";
 // import ApplicationDetailModal from "../pages/candidate/ApplicationDetailModal";
 // Recruiter Pages
 import RecruiterDashboard from "../pages/recruiter/Dashboard";
@@ -31,6 +32,8 @@ import RecruiterJobDetail from "../pages/recruiter/JobDetail";
 import AdminDashboard from "../pages/admin/Dashboard";
 import AdminJobReview from "../pages/admin/JobReview";
 import AdminCompanyReview from "../pages/admin/CompanyReview";
+import AdminUserManagement from "../pages/admin/UserManagement";
+import AdminReports from "../pages/admin/Reports";
 
 // AppRouter defines the main routing structure for the application.
 export default function AppRouter() {
@@ -50,6 +53,7 @@ export default function AppRouter() {
           <Route index element={<CandidateDashboard />} />
           <Route path="profile" element={<CandidateProfile />} />
           <Route path="recommended" element={<RecommendedJobs />} />
+          <Route path="saved" element={<SavedJobs />} />
           <Route path="jobs/:jobId" element={<JobDetail />} />
           <Route path="apply/:jobId" element={<ApplyJob />} />
           <Route path="applications" element={<MyApplications />} />
@@ -71,6 +75,8 @@ export default function AppRouter() {
           <Route index element={<AdminDashboard />} />
           <Route path="jobs" element={<AdminJobReview />} />
           <Route path="companies" element={<AdminCompanyReview />} />
+          <Route path="users" element={<AdminUserManagement />} />
+          <Route path="reports" element={<AdminReports />} />
         </Route>
       </Routes>
     </BrowserRouter>

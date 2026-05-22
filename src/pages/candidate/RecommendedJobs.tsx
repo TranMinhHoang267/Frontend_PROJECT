@@ -36,48 +36,80 @@ export default function RecommendedJobs() {
   const [jobs, setJobs] = useState<JobItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [candidateKeywords, setCandidateKeywords] = useState<string>("");
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const jobsPerPage = 5;
+
+  const fetchRecommendations = async () => {
+    setLoading(true);
+    try {
+      const profile = await candidateService.getProfile();
+      const candidateProfileString = `${profile.headline || ''} ${profile.bio || ''} ${((profile as Record<string, unknown>).skills as string[] || []).join(' ')}`.toLowerCase();
+      
+      let primaryKeywords = "";
+      if (candidateProfileString.includes("backend")) primaryKeywords += "Backend ";
+      if (candidateProfileString.includes("frontend")) primaryKeywords += "Frontend ";
+      if (candidateProfileString.includes("react")) primaryKeywords += "React ";
+      if (candidateProfileString.includes("node")) primaryKeywords += "NodeJS ";
+      if (candidateProfileString.includes("vue")) primaryKeywords += "Vue ";
+      
+      setCandidateKeywords(primaryKeywords.trim() || profile.headline || 'phát triển phần mềm');
+
+      // Fetch suggestions and bookmarks parallelly
+      const [suggestions, bookmarkData] = await Promise.all([
+        jobService.getSuggestions(20),
+        candidateService.getBookmarks({ limit: 100 })
+      ]);
+      
+      const bookmarkedJobIds = new Set(
+        (bookmarkData.bookmarks || []).map((b: { job?: { id?: string | number } }) => String(b.job?.id || ''))
+      );
+      
+      const processedSuggestions = suggestions.map((job: JobItem & { matchPercent?: number }) => {
+         let score = job.matchPercent;
+         if (score === undefined || score === null) {
+            score = 70; // fallback mặc định
+         }
+         return { 
+            ...job, 
+            match: score,
+            favorite: bookmarkedJobIds.has(String(job.id))
+         };
+      });
+
+      setJobs(processedSuggestions);
+    } catch (err) {
+      console.error("Error fetching recommended jobs:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchRecommendations = async () => {
-      setLoading(true);
-      try {
-        const profile = await candidateService.getProfile();
-        const candidateProfileString = `${profile.headline || ''} ${profile.bio || ''} ${((profile as Record<string, unknown>).skills as string[] || []).join(' ')}`.toLowerCase();
-        
-        let primaryKeywords = "";
-        if (candidateProfileString.includes("backend")) primaryKeywords += "Backend ";
-        if (candidateProfileString.includes("frontend")) primaryKeywords += "Frontend ";
-        if (candidateProfileString.includes("react")) primaryKeywords += "React ";
-        if (candidateProfileString.includes("node")) primaryKeywords += "NodeJS ";
-        if (candidateProfileString.includes("vue")) primaryKeywords += "Vue ";
-        
-        setCandidateKeywords(primaryKeywords.trim() || profile.headline || 'phát triển phần mềm');
-
-        const suggestions = await jobService.getSuggestions(10);
-        
-        const processedSuggestions = suggestions.map((job: JobItem, index: number) => {
-           let score = job.match;
-           if (!score) score = Math.max(65, 98 - (index * 6));
-           return { 
-              ...job, 
-              match: score,
-              favorite: index === 1
-           };
-        });
-
-        setJobs(processedSuggestions);
-      } catch (err) {
-        console.error("Error fetching recommended jobs:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchRecommendations();
   }, []);
 
   const handleApply = (job: JobItem) => {
     navigate(`/candidate/apply/${job.id}`, { state: { job } });
   };
+
+  const handleToggleFavorite = async (jobId: string | number) => {
+    try {
+      await candidateService.toggleBookmark(jobId);
+      setJobs(prevJobs => 
+        prevJobs.map(job => 
+          job.id === jobId ? { ...job, favorite: !job.favorite } : job
+        )
+      );
+      // Show dynamic notification if you want, but simple toggle is cleaner
+    } catch (err) {
+      console.error("Lỗi khi lưu/bỏ lưu việc làm:", err);
+      alert("Có lỗi xảy ra, vui lòng thử lại sau.");
+    }
+  };
+
+  const totalPages = Math.ceil(jobs.length / jobsPerPage);
+  const startIndex = (currentPage - 1) * jobsPerPage;
+  const paginatedJobs = jobs.slice(startIndex, startIndex + jobsPerPage);
 
   return (
     <div className="max-w-[1000px] mx-auto space-y-6 pb-20">
@@ -112,38 +144,35 @@ export default function RecommendedJobs() {
         <div className="text-center py-20 text-slate-500">Chưa có công việc nào phù hợp với bạn lúc này.</div>
       ) : (
         <div className="space-y-5">
-          {jobs.slice(0, 5).map((job: JobItem, index: number) => {
+          {paginatedJobs.map((job: JobItem, index: number) => {
             const matchScore = job.match || 0;
             const coverImage = COVER_IMAGES[index % COVER_IMAGES.length];
             
-            // Thay hàm formatVND inline cũ bằng hàm dùng chung này
-const fmt = (n: number) => {
-  if (n >= 1_000_000) {
-    const inMillion = n / 1_000_000;
-    return `${inMillion.toLocaleString("vi-VN", { maximumFractionDigits: 1 })} Tr`;
-  } else if (n >= 1_000) {
-    const inThousand = n / 1_000;
-    return `${inThousand.toLocaleString("vi-VN", { maximumFractionDigits: 0 })} N`;
-  }
-  return `${n.toLocaleString("vi-VN")} đ`;
-};
+            const fmt = (n: number) => {
+              if (n >= 1_000_000) {
+                const inMillion = n / 1_000_000;
+                return `${inMillion.toLocaleString("vi-VN", { maximumFractionDigits: 1 })} Tr`;
+              } else if (n >= 1_000) {
+                const inThousand = n / 1_000;
+                return `${inThousand.toLocaleString("vi-VN", { maximumFractionDigits: 0 })} N`;
+              }
+              return `${n.toLocaleString("vi-VN")} đ`;
+            };
 
-// Thay đoạn format salary cũ:
-let salaryText = 'Thỏa thuận';
-if (job.salary_min && job.salary_max) {
-  salaryText = `${fmt(job.salary_min)} – ${fmt(job.salary_max)}`;
-} else if (job.salary_min) {
-  salaryText = `Từ ${fmt(job.salary_min)}`;
-} else if (job.salary_max) {
-  salaryText = `Đến ${fmt(job.salary_max)}`;
-}
+            let salaryText = 'Thỏa thuận';
+            if (job.salary_min && job.salary_max) {
+              salaryText = `${fmt(job.salary_min)} – ${fmt(job.salary_max)}`;
+            } else if (job.salary_min) {
+              salaryText = `Từ ${fmt(job.salary_min)}`;
+            } else if (job.salary_max) {
+              salaryText = `Đến ${fmt(job.salary_max)}`;
+            }
 
             const displayTags: string[] = [];
             
             if (job.job_type) displayTags.push(job.job_type);
             if (job.job_level) displayTags.push(job.job_level);
             
-            // Xử lý skills: có thể backend trả về string "Node, React" hoặc mảng các string/object
             let skillsArray: string[] = [];
             if (typeof job.skills === 'string' && job.skills.trim()) {
                skillsArray = job.skills.split(',').map(s => s.trim()).filter(Boolean);
@@ -152,7 +181,6 @@ if (job.salary_min && job.salary_max) {
             }
             if (skillsArray.length > 0) displayTags.push(...skillsArray);
             
-            // Nếu vẫn rỗng, thử trích xuất 1 vài từ khoá từ title
             if (displayTags.length === 0) {
                if (job.title.toLowerCase().includes('backend')) displayTags.push('Backend');
                if (job.title.toLowerCase().includes('frontend')) displayTags.push('Frontend');
@@ -160,26 +188,33 @@ if (job.salary_min && job.salary_max) {
             }
 
             return (
-              <div key={job.id} className="bg-white border border-slate-200 rounded-[20px] flex flex-col md:flex-row overflow-hidden hover:border-[#1e3fae]/30 hover:shadow-lg transition-all duration-300 group shadow-sm h-full md:h-[240px]">
-                <div className="md:w-[320px] relative h-[200px] md:h-full flex-shrink-0 border-r border-slate-100">
+              <div key={job.id} className="bg-white border border-slate-200 rounded-[20px] flex flex-col md:flex-row overflow-hidden hover:border-[#1e3fae]/30 hover:shadow-lg transition-all duration-300 group shadow-sm h-full md:h-[220px]">
+                <div className="md:w-[260px] relative h-[160px] md:h-full flex-shrink-0 border-r border-slate-100">
                   <img src={coverImage} alt={job.title} className="w-full h-full object-cover" />
-                  <div className={`absolute top-4 left-4 px-3.5 py-1.5 rounded-full text-white text-[13px] font-bold shadow-sm ${
+                  <div className={`absolute top-4 left-4 px-3 py-1 rounded-lg text-white text-[11px] font-bold shadow-sm ${
                     matchScore >= 90 ? 'bg-[#00c569]' : matchScore >= 80 ? 'bg-emerald-500' : 'bg-amber-500'
                   }`}>
                     {matchScore}% Độ phù hợp
                   </div>
                 </div>
                 
-                <div className="flex-1 p-6 md:p-8 flex flex-col justify-between">
+                <div className="flex-1 p-6 md:p-7 flex flex-col justify-between">
                   <div>
                     <div className="flex items-start justify-between mb-2.5">
-                      <h2 className="text-[22px] font-bold text-slate-900 group-hover:text-[#2143ad] transition-colors">{job.title}</h2>
-                      <button className="text-slate-300 hover:text-red-500 transition-colors p-1">
-                        <Heart className={`w-6 h-6 ${job.favorite ? 'fill-red-500 text-red-500' : ''}`} />
+                      <h2 className="text-[20px] font-bold text-slate-900 group-hover:text-[#2143ad] transition-colors line-clamp-1">{job.title}</h2>
+                      <button 
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleToggleFavorite(job.id);
+                        }}
+                        className="text-slate-300 hover:text-red-500 transition-colors p-1"
+                      >
+                        <Heart className={`w-6 h-6 hover:scale-110 transition-transform ${job.favorite ? 'fill-red-500 text-red-500' : ''}`} />
                       </button>
                     </div>
                     
-                    <div className="flex flex-wrap items-center gap-5 text-[15px] font-medium mb-5">
+                    <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[14px] font-medium mb-4">
                       <span className="flex items-center gap-2 text-slate-500 max-w-[200px] truncate" title={job.company?.name || 'Công ty bảo mật'}>
                         <Building2 className="w-4.5 h-4.5 text-slate-400 flex-shrink-0" />
                         {job.company?.name || 'Công ty bảo mật'}
@@ -194,35 +229,33 @@ if (job.salary_min && job.salary_max) {
                       </span>
                     </div>
 
-                    <div className="flex flex-wrap gap-2.5 mb-6">
+                    <div className="flex flex-wrap gap-2 mb-4">
                       {displayTags.length > 0 ? displayTags.slice(0, 3).map((tag: string, idx: number) => (
-                        <span key={idx} className="px-3 py-1.5 text-[13px] font-semibold rounded-lg bg-slate-100 text-slate-600">
+                        <span key={idx} className="px-2.5 py-1 text-[12px] font-semibold rounded-lg bg-slate-100 text-slate-600">
                           {tag}
                         </span>
                       )) : (
-                        <span className="px-3 py-1.5 text-[13px] font-semibold rounded-lg bg-slate-100 text-slate-600">
+                        <span className="px-2.5 py-1 text-[12px] font-semibold rounded-lg bg-slate-100 text-slate-600">
                           Xem chi tiết phần Yêu cầu
                         </span>
                       )}
                       
                       {displayTags.length > 3 && (
-                        <span className="px-3 py-1.5 text-[13px] font-semibold rounded-lg bg-blue-50 text-[#2143ad]">
+                        <span className="px-2.5 py-1 text-[12px] font-semibold rounded-lg bg-blue-50 text-[#2143ad]">
                           +{displayTags.length - 3} Kỹ năng khác
                         </span>
                       )}
                     </div>
                   </div>
 
-                  <div className="flex gap-4">
+                  <div className="flex gap-4 pt-1">
                     <button 
                       onClick={() => handleApply(job)}
-                      className="flex-1 px-6 py-3 bg-[#2143ad] hover:bg-[#162f8c] text-white text-[15px] font-bold rounded-xl transition-colors flex items-center justify-center gap-2 shadow-sm"
+                      className="flex-1 px-6 py-2.5 bg-[#2143ad] hover:bg-[#162f8c] text-white text-[14px] font-bold rounded-xl transition-colors flex items-center justify-center gap-2 shadow-sm"
                     >
                       Ứng tuyển ngay
-
-                      
                     </button>
-                    <Link to={`/candidate/jobs/${job.id}`} className="flex-1 px-6 py-3 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 hover:text-slate-900 text-[15px] font-bold rounded-xl transition-all flex items-center justify-center shadow-sm">
+                    <Link to={`/candidate/jobs/${job.id}`} className="flex-1 px-6 py-2.5 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 hover:text-slate-900 text-[14px] font-bold rounded-xl transition-all flex items-center justify-center shadow-sm">
                       Xem chi tiết
                     </Link>
                   </div>
@@ -233,15 +266,40 @@ if (job.salary_min && job.salary_max) {
         </div>
       )}
 
-      {!loading && jobs.length > 0 && (
+      {!loading && jobs.length > 0 && totalPages > 1 && (
         <div className="flex items-center justify-center gap-2 pt-8">
-          <button className="size-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors shadow-sm">&lt;</button>
-          <button className="size-10 bg-[#2143ad] text-white rounded-xl flex items-center justify-center font-bold text-[15px] shadow-sm">1</button>
-          <button className="size-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-slate-600 hover:bg-slate-50 transition-colors font-semibold text-[15px] shadow-sm">2</button>
-          <button className="size-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-slate-600 hover:bg-slate-50 transition-colors font-semibold text-[15px] shadow-sm">3</button>
-          <span className="px-3 text-slate-400 font-medium">...</span>
-          <button className="size-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-slate-600 hover:bg-slate-50 transition-colors font-semibold text-[15px] shadow-sm">10</button>
-          <button className="size-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-colors shadow-sm">&gt;</button>
+          <button 
+            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+            disabled={currentPage === 1}
+            className="size-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-slate-400 hover:bg-slate-50 hover:text-slate-600 disabled:opacity-50 disabled:pointer-events-none transition-colors shadow-sm"
+          >
+            &lt;
+          </button>
+          
+          {Array.from({ length: totalPages }).map((_, idx) => {
+            const pageNum = idx + 1;
+            return (
+              <button
+                key={pageNum}
+                onClick={() => setCurrentPage(pageNum)}
+                className={`size-10 rounded-xl flex items-center justify-center font-bold text-[15px] shadow-sm transition-colors ${
+                  currentPage === pageNum
+                    ? "bg-[#2143ad] text-white"
+                    : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                }`}
+              >
+                {pageNum}
+              </button>
+            );
+          })}
+          
+          <button 
+            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+            disabled={currentPage === totalPages}
+            className="size-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-slate-500 hover:bg-slate-50 disabled:opacity-50 disabled:pointer-events-none transition-colors shadow-sm"
+          >
+            &gt;
+          </button>
         </div>
       )}
     </div>
