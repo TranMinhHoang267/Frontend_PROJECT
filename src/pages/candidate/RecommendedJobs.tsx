@@ -1,306 +1,359 @@
-import { BarChart, Heart, MapPin, Loader2, Building2, Banknote } from "lucide-react";
 import { useState, useEffect } from "react";
+import { Heart, MapPin, Loader2, Sparkles, Building2 } from "lucide-react";
 import { jobService } from "../../services/job.service";
 import { candidateService } from "../../services/candidate.service";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
-// Demo images to match the exact design vibe
-const COVER_IMAGES = [
-  "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1600607686527-6fb886090705?q=80&w=2600&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1551434678-e076c223a692?q=80&w=2670&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1556761175-4b46a572b786?q=80&w=2574&auto=format&fit=crop",
-];
+// ─── Types ────────────────────────────────────────────────────────────────────
+interface SkillItem { id: number | string; name: string }
 
 interface JobItem {
   id: string | number;
-  company_id?: string;
   title: string;
-  description?: string;
-  requirements?: string;
-  benefits?: string;
-  skills?: string;
-  company?: { name: string; logo_url?: string; city?: string };
+  skills?: SkillItem[] | string;
+  company?: { name?: string; logoUrl?: string; logo_url?: string; city?: string };
   location?: string;
-  salary_min?: number;
-  salary_max?: number;
-  job_type?: string;
-  job_level?: string;
+  salaryMin?: number;  salary_min?: number;
+  salaryMax?: number;  salary_max?: number;
+  jobType?: string;    job_type?: string;
+  jobLevel?: string;   job_level?: string;
   deadline?: string;
+  createdAt?: string;
   match?: number;
+  matchPercent?: number;
+  matchedSkills?: string[];
   favorite?: boolean;
 }
 
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+const formatSalary = (job: JobItem): string => {
+  const min = job.salaryMin ?? job.salary_min;
+  const max = job.salaryMax ?? job.salary_max;
+  const fmt = (n: number) => {
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(0)} tr`;
+    if (n >= 1_000)     return `${(n / 1_000).toFixed(0)}N`;
+    return String(n);
+  };
+  if (min && max) return `${fmt(min)} - ${fmt(max)} triệu`;
+  if (min)        return `Từ ${fmt(min)} triệu`;
+  if (max)        return `Tới ${fmt(max)} triệu`;
+  return "Thỏa thuận";
+};
+
+const getSkills = (job: JobItem): SkillItem[] => {
+  if (!job.skills) return [];
+  if (Array.isArray(job.skills)) return job.skills as SkillItem[];
+  if (typeof job.skills === "string" && job.skills.trim())
+    return job.skills.split(",").map((s, i) => ({ id: i, name: s.trim() })).filter(s => s.name);
+  return [];
+};
+
+const JOB_COLORS = ["#1e3fae", "#0891b2", "#059669", "#7c3aed", "#d97706", "#dc2626"];
+const jobColor = (id: string | number) => JOB_COLORS[String(id).length % JOB_COLORS.length];
+
+const matchBadgeStyle = (score: number) => {
+  if (score >= 90) return "bg-emerald-100 text-emerald-700 border-emerald-200";
+  if (score >= 70) return "bg-blue-50 text-[#1e3fae] border-blue-200";
+  if (score >= 50) return "bg-amber-50 text-amber-700 border-amber-200";
+  return "bg-slate-100 text-slate-500 border-slate-200";
+};
+
+// ─── Job Card ─────────────────────────────────────────────────────────────────
+function JobCard({
+  job,
+  onApply,
+  onToggleFavorite,
+}: {
+  job: JobItem;
+  onApply: (job: JobItem) => void;
+  onToggleFavorite: (id: string | number) => void;
+}) {
+  const score        = job.match ?? job.matchPercent ?? 0;
+  const skills       = getSkills(job);
+  const matchedSet   = new Set(job.matchedSkills ?? []);
+  const company      = job.company;
+  const companyName  = company?.name || "Công ty bảo mật";
+  const logoUrl      = company?.logoUrl ?? company?.logo_url ?? "";
+  const location     = job.location || company?.city || "";
+  const salary       = formatSalary(job);
+
+  return (
+    <div
+      onClick={() => onApply(job)}
+      className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col gap-3 cursor-pointer hover:shadow-lg hover:border-[#1e3fae]/30 hover:-translate-y-0.5 transition-all duration-200 shadow-sm group"
+    >
+      {/* ── Top: Logo + Title + Company ── */}
+      <div className="flex items-start gap-3">
+        {/* Logo */}
+        <div
+          className="w-12 h-12 rounded-xl border border-slate-100 bg-slate-50 flex items-center justify-center shrink-0 overflow-hidden"
+          style={!logoUrl ? { background: jobColor(job.id) } : {}}
+        >
+          {logoUrl ? (
+            <img src={logoUrl} alt={companyName} className="w-full h-full object-contain p-1 bg-white" />
+          ) : (
+            <span className="text-white text-lg font-black">{job.title.charAt(0).toUpperCase()}</span>
+          )}
+        </div>
+
+        {/* Text block */}
+        <div className="flex-1 min-w-0">
+          {/* Match + badges row */}
+          <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+            <span className={`inline-flex items-center gap-0.5 text-[10px] font-bold px-2 py-0.5 rounded-full border ${matchBadgeStyle(score)}`}>
+              <Sparkles className="w-2.5 h-2.5" />
+              {score}%
+            </span>
+          </div>
+
+          {/* Job title */}
+          <h3 className="font-bold text-slate-900 text-[13.5px] leading-snug line-clamp-2 group-hover:text-[#1e3fae] transition-colors">
+            {job.title}
+          </h3>
+
+          {/* Company */}
+          <p className="text-[11.5px] text-slate-400 font-medium mt-0.5 truncate" title={companyName}>
+            {companyName}
+          </p>
+        </div>
+      </div>
+
+      {/* ── Skills (matched highlighted) ── */}
+      {skills.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {skills.slice(0, 3).map(sk => {
+            const isMatch = matchedSet.has(sk.name);
+            return (
+              <span
+                key={sk.id}
+                className={`text-[10.5px] font-semibold px-2 py-0.5 rounded-lg border ${
+                  isMatch
+                    ? "bg-[#1e3fae]/8 text-[#1e3fae] border-[#1e3fae]/20 bg-blue-50"
+                    : "bg-slate-50 text-slate-500 border-slate-200"
+                }`}
+              >
+                {isMatch && "✓ "}{sk.name}
+              </span>
+            );
+          })}
+          {skills.length > 3 && (
+            <span className="text-[10.5px] font-semibold px-2 py-0.5 rounded-lg bg-blue-50 text-[#1e3fae] border border-blue-100">
+              +{skills.length - 3}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* ── Bottom: Salary + Location + Heart (luôn hiện) ── */}
+      <div className="flex items-center justify-between gap-2 mt-auto">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[11.5px] font-bold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-lg whitespace-nowrap">
+            {salary}
+          </span>
+          {location && (
+            <span className="flex items-center gap-1 text-[11.5px] font-medium text-slate-500 bg-slate-50 border border-slate-100 px-2.5 py-1 rounded-lg whitespace-nowrap">
+              <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+              {location.length > 14 ? location.slice(0, 14) + "..." : location}
+            </span>
+          )}
+        </div>
+        {/* Heart — luôn hiển thị */}
+        <button
+          onClick={e => { e.stopPropagation(); onToggleFavorite(job.id); }}
+          title={job.favorite ? "Bỏ lưu" : "Lưu việc làm"}
+          className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors shrink-0 ${
+            job.favorite
+              ? "text-red-500 bg-red-50"
+              : "text-slate-300 hover:text-red-400 hover:bg-red-50"
+          }`}
+        >
+          <Heart className={`w-4 h-4 ${job.favorite ? "fill-red-500" : ""}`} />
+        </button>
+      </div>
+
+      {/* ── Nút ứng tuyển — chỉ hiện khi hover (group-hover) ── */}
+      <div className="overflow-hidden transition-all duration-200 ease-out max-h-0 group-hover:max-h-12 opacity-0 group-hover:opacity-100">
+        <button
+          onClick={e => { e.stopPropagation(); onApply(job); }}
+          className="w-full h-9 bg-[#1e3fae] hover:bg-[#162f8c] text-white text-[12.5px] font-bold rounded-xl transition-colors shadow-sm shadow-[#1e3fae]/20 flex items-center justify-center mt-2"
+        >
+          Ứng tuyển ngay →
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
 export default function RecommendedJobs() {
   const navigate = useNavigate();
-  const [jobs, setJobs] = useState<JobItem[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [candidateKeywords, setCandidateKeywords] = useState<string>("");
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const jobsPerPage = 5;
+  const [jobs, setJobs]         = useState<JobItem[]>([]);
+  const [loading, setLoading]   = useState(true);
+  const [keywords, setKeywords] = useState("");
+  const [page, setPage]         = useState(1);
+  const PER_PAGE = 9; // 3 cols × 3 rows
 
-  const fetchRecommendations = async () => {
+  const fetchData = async () => {
     setLoading(true);
     try {
       const profile = await candidateService.getProfile();
-      const candidateProfileString = `${profile.headline || ''} ${profile.bio || ''} ${((profile as Record<string, unknown>).skills as string[] || []).join(' ')}`.toLowerCase();
-      
-      let primaryKeywords = "";
-      if (candidateProfileString.includes("backend")) primaryKeywords += "Backend ";
-      if (candidateProfileString.includes("frontend")) primaryKeywords += "Frontend ";
-      if (candidateProfileString.includes("react")) primaryKeywords += "React ";
-      if (candidateProfileString.includes("node")) primaryKeywords += "NodeJS ";
-      if (candidateProfileString.includes("vue")) primaryKeywords += "Vue ";
-      
-      setCandidateKeywords(primaryKeywords.trim() || profile.headline || 'phát triển phần mềm');
+      const profileStr = `${profile.headline || ""} ${profile.bio || ""} ${
+        ((profile as Record<string, unknown>).skills as string[] || []).join(" ")
+      }`.toLowerCase();
+      let kw = "";
+      if (profileStr.includes("backend"))  kw += "Backend ";
+      if (profileStr.includes("frontend")) kw += "Frontend ";
+      if (profileStr.includes("react"))    kw += "React ";
+      if (profileStr.includes("node"))     kw += "NodeJS ";
+      if (profileStr.includes("vue"))      kw += "Vue ";
+      setKeywords(kw.trim() || profile.headline || "Phát triển phần mềm");
 
-      // Fetch suggestions and bookmarks parallelly
       const [suggestions, bookmarkData] = await Promise.all([
-        jobService.getSuggestions(20),
-        candidateService.getBookmarks({ limit: 100 })
+        jobService.getSuggestions(60),
+        candidateService.getBookmarks({ limit: 200 }),
       ]);
-      
-      const bookmarkedJobIds = new Set(
-        (bookmarkData.bookmarks || []).map((b: { job?: { id?: string | number } }) => String(b.job?.id || ''))
-      );
-      
-      const processedSuggestions = suggestions.map((job: JobItem & { matchPercent?: number }) => {
-         let score = job.matchPercent;
-         if (score === undefined || score === null) {
-            score = 70; // fallback mặc định
-         }
-         return { 
-            ...job, 
-            match: score,
-            favorite: bookmarkedJobIds.has(String(job.id))
-         };
-      });
 
-      setJobs(processedSuggestions);
+      const bookmarkedIds = new Set(
+        (bookmarkData.bookmarks || []).map(
+          (b: { job?: { id?: string | number } }) => String(b.job?.id || "")
+        )
+      );
+
+      setJobs(
+        suggestions.map((job: JobItem) => ({
+          ...job,
+          match: job.matchPercent ?? job.match ?? 50,
+          favorite: bookmarkedIds.has(String(job.id)),
+        }))
+      );
     } catch (err) {
-      console.error("Error fetching recommended jobs:", err);
+      console.error("Error:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchRecommendations();
-  }, []);
+  useEffect(() => { fetchData(); }, []);
 
-  const handleApply = (job: JobItem) => {
-    navigate(`/candidate/apply/${job.id}`, { state: { job } });
-  };
-
-  const handleToggleFavorite = async (jobId: string | number) => {
+  const handleApply  = (job: JobItem) => navigate(`/candidate/apply/${job.id}`, { state: { job, from: '/candidate/recommended' } });
+  const handleToggle = async (id: string | number) => {
     try {
-      await candidateService.toggleBookmark(jobId);
-      setJobs(prevJobs => 
-        prevJobs.map(job => 
-          job.id === jobId ? { ...job, favorite: !job.favorite } : job
-        )
-      );
-      // Show dynamic notification if you want, but simple toggle is cleaner
-    } catch (err) {
-      console.error("Lỗi khi lưu/bỏ lưu việc làm:", err);
-      alert("Có lỗi xảy ra, vui lòng thử lại sau.");
-    }
+      await candidateService.toggleBookmark(id);
+      setJobs(prev => prev.map(j => j.id === id ? { ...j, favorite: !j.favorite } : j));
+    } catch (e) { console.error(e); }
   };
 
-  const totalPages = Math.ceil(jobs.length / jobsPerPage);
-  const startIndex = (currentPage - 1) * jobsPerPage;
-  const paginatedJobs = jobs.slice(startIndex, startIndex + jobsPerPage);
+  const totalPages = Math.ceil(jobs.length / PER_PAGE);
+  const paginated  = jobs.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+
+  // Pagination range with ellipsis
+  const buildPages = (): (number | "...")[] => {
+    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
+    const res: (number | "...")[] = [1];
+    if (page > 3) res.push("...");
+    for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) res.push(i);
+    if (page < totalPages - 2) res.push("...");
+    res.push(totalPages);
+    return res;
+  };
 
   return (
-    <div className="max-w-[1000px] mx-auto space-y-6 pb-20">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="max-w-[1100px] mx-auto py-6 px-4 md:px-8 space-y-5 pb-20">
+
+      {/* ── Header ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-[28px] font-bold text-slate-900 mb-1">Việc làm gợi ý</h1>
-          <p className="text-slate-500 text-[15px]">
-            Dựa trên hồ sơ của bạn <span className="font-bold text-[#1e3fae]">{candidateKeywords || 'Phát triển phần mềm'}</span>
+          <h1 className="text-[22px] font-black text-slate-900 tracking-tight">Việc làm gợi ý</h1>
+          <p className="text-slate-500 text-sm mt-0.5">
+            Dựa trên kỹ năng:{" "}
+            <span className="font-bold text-[#1e3fae]">{keywords || "Phát triển phần mềm"}</span>
           </p>
         </div>
-        <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-slate-200 text-sm text-slate-600 font-medium whitespace-nowrap shadow-sm">
-          <div className="size-5 rounded-full bg-blue-50 text-[#1e3fae] flex items-center justify-center">
-            <span className="material-symbols-outlined text-[14px]">info</span>
-          </div>
-          Cập nhật lúc: 10:30 Hôm nay
+        <div className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-600 shadow-sm whitespace-nowrap">
+          <Building2 className="w-4 h-4 text-[#1e3fae]" />
+          {loading ? "Đang tải..." : `${jobs.length} việc làm phù hợp`}
         </div>
       </div>
 
-      <div className="bg-[#f4f6fe] border border-blue-100 rounded-[16px] p-5 flex gap-4">
-        <div className="bg-white size-12 rounded-xl shadow-sm flex items-center justify-center flex-shrink-0 text-[#1e3fae]">
-          <BarChart className="w-6 h-6" />
-        </div>
-        <div>
-          <h3 className="font-bold text-slate-900 text-sm mb-1 uppercase tracking-wider">CÁCH TÍNH ĐỘ PHÙ HỢP</h3>
-          <p className="text-slate-600 text-[15px]">Chúng tôi phân tích mô tả công việc, yêu cầu kỹ năng và vị trí địa lý để đưa ra điểm số Match Score chính xác nhất cho bạn.</p>
-        </div>
+      {/* ── Info banner ── */}
+      <div className="bg-[#f4f6fe] border border-blue-100 rounded-2xl px-4 py-3 flex gap-3 items-center">
+        <Sparkles className="w-4 h-4 text-[#1e3fae] shrink-0" />
+        <p className="text-slate-600 text-[13px]">
+          <span className="font-bold text-slate-800">Kỹ năng ✓ xanh</span> = khớp hồ sơ của bạn •{" "}
+          <span className="font-bold text-emerald-700">≥90%</span> rất phù hợp •{" "}
+          <span className="font-bold text-[#1e3fae]">≥70%</span> phù hợp •{" "}
+          <span className="font-bold text-amber-600">≥50%</span> tương đối
+        </p>
       </div>
 
+      {/* ── Content ── */}
       {loading ? (
-        <div className="flex justify-center p-20"><Loader2 className="animate-spin w-10 h-10 text-[#2143ad]" /></div>
+        <div className="flex justify-center py-24">
+          <Loader2 className="animate-spin w-10 h-10 text-[#1e3fae]" />
+        </div>
       ) : jobs.length === 0 ? (
-        <div className="text-center py-20 text-slate-500">Chưa có công việc nào phù hợp với bạn lúc này.</div>
+        <div className="flex flex-col items-center justify-center py-24 bg-white rounded-2xl border border-dashed border-slate-200 text-center">
+          <div className="size-14 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
+            <Building2 className="w-7 h-7 text-slate-300" />
+          </div>
+          <p className="font-bold text-slate-700 mb-1">Chưa có việc làm phù hợp</p>
+          <p className="text-slate-400 text-sm">Cập nhật thêm kỹ năng trong hồ sơ để nhận gợi ý tốt hơn.</p>
+        </div>
       ) : (
-        <div className="space-y-5">
-          {paginatedJobs.map((job: JobItem, index: number) => {
-            const matchScore = job.match || 0;
-            const coverImage = COVER_IMAGES[index % COVER_IMAGES.length];
-            
-            const fmt = (n: number) => {
-              if (n >= 1_000_000) {
-                const inMillion = n / 1_000_000;
-                return `${inMillion.toLocaleString("vi-VN", { maximumFractionDigits: 1 })} Tr`;
-              } else if (n >= 1_000) {
-                const inThousand = n / 1_000;
-                return `${inThousand.toLocaleString("vi-VN", { maximumFractionDigits: 0 })} N`;
-              }
-              return `${n.toLocaleString("vi-VN")} đ`;
-            };
+        <>
+          {/* 3-column grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {paginated.map(job => (
+              <JobCard
+                key={job.id}
+                job={job}
+                onApply={handleApply}
+                onToggleFavorite={handleToggle}
+              />
+            ))}
+          </div>
 
-            let salaryText = 'Thỏa thuận';
-            if (job.salary_min && job.salary_max) {
-              salaryText = `${fmt(job.salary_min)} – ${fmt(job.salary_max)}`;
-            } else if (job.salary_min) {
-              salaryText = `Từ ${fmt(job.salary_min)}`;
-            } else if (job.salary_max) {
-              salaryText = `Đến ${fmt(job.salary_max)}`;
-            }
-
-            const displayTags: string[] = [];
-            
-            if (job.job_type) displayTags.push(job.job_type);
-            if (job.job_level) displayTags.push(job.job_level);
-            
-            let skillsArray: string[] = [];
-            if (typeof job.skills === 'string' && job.skills.trim()) {
-               skillsArray = job.skills.split(',').map(s => s.trim()).filter(Boolean);
-            } else if (Array.isArray(job.skills)) {
-               skillsArray = job.skills.map(s => typeof s === 'object' && s !== null ? (s.name || JSON.stringify(s)) : String(s));
-            }
-            if (skillsArray.length > 0) displayTags.push(...skillsArray);
-            
-            if (displayTags.length === 0) {
-               if (job.title.toLowerCase().includes('backend')) displayTags.push('Backend');
-               if (job.title.toLowerCase().includes('frontend')) displayTags.push('Frontend');
-               if (job.title.toLowerCase().includes('react')) displayTags.push('React');
-            }
-
-            return (
-              <div key={job.id} className="bg-white border border-slate-200 rounded-[20px] flex flex-col md:flex-row overflow-hidden hover:border-[#1e3fae]/30 hover:shadow-lg transition-all duration-300 group shadow-sm h-full md:h-[220px]">
-                <div className="md:w-[260px] relative h-[160px] md:h-full flex-shrink-0 border-r border-slate-100">
-                  <img src={coverImage} alt={job.title} className="w-full h-full object-cover" />
-                  <div className={`absolute top-4 left-4 px-3 py-1 rounded-lg text-white text-[11px] font-bold shadow-sm ${
-                    matchScore >= 90 ? 'bg-[#00c569]' : matchScore >= 80 ? 'bg-emerald-500' : 'bg-amber-500'
-                  }`}>
-                    {matchScore}% Độ phù hợp
-                  </div>
-                </div>
-                
-                <div className="flex-1 p-6 md:p-7 flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-start justify-between mb-2.5">
-                      <h2 className="text-[20px] font-bold text-slate-900 group-hover:text-[#2143ad] transition-colors line-clamp-1">{job.title}</h2>
-                      <button 
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          handleToggleFavorite(job.id);
-                        }}
-                        className="text-slate-300 hover:text-red-500 transition-colors p-1"
-                      >
-                        <Heart className={`w-6 h-6 hover:scale-110 transition-transform ${job.favorite ? 'fill-red-500 text-red-500' : ''}`} />
-                      </button>
-                    </div>
-                    
-                    <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[14px] font-medium mb-4">
-                      <span className="flex items-center gap-2 text-slate-500 max-w-[200px] truncate" title={job.company?.name || 'Công ty bảo mật'}>
-                        <Building2 className="w-4.5 h-4.5 text-slate-400 flex-shrink-0" />
-                        {job.company?.name || 'Công ty bảo mật'}
-                      </span>
-                      <span className="flex items-center gap-2 text-slate-500">
-                        <MapPin className="w-4.5 h-4.5 text-slate-400" />
-                        {job.location || job.company?.city || 'Thỏa thuận'}
-                      </span>
-                      <span className="flex items-center gap-2 text-[#2143ad] font-bold">
-                        <Banknote className="w-4.5 h-4.5 text-[#2143ad]" />
-                        {salaryText}
-                      </span>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      {displayTags.length > 0 ? displayTags.slice(0, 3).map((tag: string, idx: number) => (
-                        <span key={idx} className="px-2.5 py-1 text-[12px] font-semibold rounded-lg bg-slate-100 text-slate-600">
-                          {tag}
-                        </span>
-                      )) : (
-                        <span className="px-2.5 py-1 text-[12px] font-semibold rounded-lg bg-slate-100 text-slate-600">
-                          Xem chi tiết phần Yêu cầu
-                        </span>
-                      )}
-                      
-                      {displayTags.length > 3 && (
-                        <span className="px-2.5 py-1 text-[12px] font-semibold rounded-lg bg-blue-50 text-[#2143ad]">
-                          +{displayTags.length - 3} Kỹ năng khác
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex gap-4 pt-1">
-                    <button 
-                      onClick={() => handleApply(job)}
-                      className="flex-1 px-6 py-2.5 bg-[#2143ad] hover:bg-[#162f8c] text-white text-[14px] font-bold rounded-xl transition-colors flex items-center justify-center gap-2 shadow-sm"
-                    >
-                      Ứng tuyển ngay
-                    </button>
-                    <Link to={`/candidate/jobs/${job.id}`} className="flex-1 px-6 py-2.5 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 hover:text-slate-900 text-[14px] font-bold rounded-xl transition-all flex items-center justify-center shadow-sm">
-                      Xem chi tiết
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {!loading && jobs.length > 0 && totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 pt-8">
-          <button 
-            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-            disabled={currentPage === 1}
-            className="size-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-slate-400 hover:bg-slate-50 hover:text-slate-600 disabled:opacity-50 disabled:pointer-events-none transition-colors shadow-sm"
-          >
-            &lt;
-          </button>
-          
-          {Array.from({ length: totalPages }).map((_, idx) => {
-            const pageNum = idx + 1;
-            return (
+          {/* ── Pagination ── */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-1.5 pt-4">
+              {/* Prev */}
               <button
-                key={pageNum}
-                onClick={() => setCurrentPage(pageNum)}
-                className={`size-10 rounded-xl flex items-center justify-center font-bold text-[15px] shadow-sm transition-colors ${
-                  currentPage === pageNum
-                    ? "bg-[#2143ad] text-white"
-                    : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
-                }`}
-              >
-                {pageNum}
-              </button>
-            );
-          })}
-          
-          <button 
-            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-            disabled={currentPage === totalPages}
-            className="size-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-slate-500 hover:bg-slate-50 disabled:opacity-50 disabled:pointer-events-none transition-colors shadow-sm"
-          >
-            &gt;
-          </button>
-        </div>
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="w-9 h-9 rounded-full border border-slate-200 bg-white flex items-center justify-center text-slate-500 hover:bg-slate-50 hover:border-[#1e3fae]/30 disabled:opacity-40 disabled:pointer-events-none transition-all shadow-sm text-base font-bold"
+              >‹</button>
+
+              {/* Page numbers */}
+              {buildPages().map((p, i) =>
+                p === "..." ? (
+                  <span key={`e${i}`} className="w-9 h-9 flex items-center justify-center text-slate-400 text-sm">…</span>
+                ) : (
+                  <button
+                    key={p}
+                    onClick={() => setPage(p as number)}
+                    className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm transition-all shadow-sm border ${
+                      page === p
+                        ? "bg-[#1e3fae] text-white border-[#1e3fae] shadow-md shadow-[#1e3fae]/25"
+                        : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-[#1e3fae]/30"
+                    }`}
+                  >{p}</button>
+                )
+              )}
+
+              {/* Counter */}
+              <span className="px-3 h-9 flex items-center rounded-full border border-slate-200 bg-white text-slate-500 text-[12px] font-semibold shadow-sm">
+                {page} / {totalPages} trang
+              </span>
+
+              {/* Next */}
+              <button
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="w-9 h-9 rounded-full border border-slate-200 bg-white flex items-center justify-center text-slate-500 hover:bg-slate-50 hover:border-[#1e3fae]/30 disabled:opacity-40 disabled:pointer-events-none transition-all shadow-sm text-base font-bold"
+              >›</button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

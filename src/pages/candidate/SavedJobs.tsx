@@ -1,15 +1,7 @@
-import { Heart, MapPin, Loader2, Building2, Banknote, Calendar, ArrowRight } from "lucide-react";
+import { Heart, MapPin, Loader2, ArrowRight, Sparkles } from "lucide-react";
 import { useState, useEffect } from "react";
 import { candidateService } from "../../services/candidate.service";
-import { Link, useNavigate } from "react-router-dom";
-
-// Cover images matching the platform aesthetics
-const COVER_IMAGES = [
-  "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1600607686527-6fb886090705?q=80&w=2600&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1551434678-e076c223a692?q=80&w=2670&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1556761175-4b46a572b786?q=80&w=2574&auto=format&fit=crop",
-];
+import { useNavigate } from "react-router-dom";
 
 interface SavedJobItem {
   bookmarkId: string;
@@ -19,240 +11,275 @@ interface SavedJobItem {
     title: string;
     location?: string;
     jobType?: string;
+    jobLevel?: string;
     salaryMin?: number;
     salaryMax?: number;
     deadline?: string;
     status?: string;
-    company?: {
-      name: string;
-      logoUrl?: string;
-      city?: string;
-    };
+    company?: { name: string; logoUrl?: string; city?: string };
   };
 }
 
+const JOB_COLORS = ["#1e3fae", "#0891b2", "#059669", "#7c3aed", "#d97706", "#dc2626"];
+const jobColor = (id: string) => JOB_COLORS[id.length % JOB_COLORS.length];
+
+const formatSalary = (min?: number, max?: number): string => {
+  const fmt = (n: number) => {
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(0)} tr`;
+    if (n >= 1_000)     return `${(n / 1_000).toFixed(0)}N`;
+    return String(n);
+  };
+  if (min && max) return `${fmt(min)} - ${fmt(max)} triệu`;
+  if (min)        return `Từ ${fmt(min)} triệu`;
+  if (max)        return `Tới ${fmt(max)} triệu`;
+  return "Thỏa thuận";
+};
+
+// ─── Job Card (same style as RecommendedJobs) ─────────────────────────────────
+function SavedJobCard({
+  item,
+  onApply,
+  onRemove,
+}: {
+  item: SavedJobItem;
+  onApply: (job: SavedJobItem["job"]) => void;
+  onRemove: (jobId: string, title: string) => void;
+}) {
+  const { job, savedAt } = item;
+  const logoUrl     = job.company?.logoUrl ?? "";
+  const companyName = job.company?.name || "Công ty bảo mật";
+  const location    = job.location || job.company?.city || "";
+  const salary      = formatSalary(job.salaryMin, job.salaryMax);
+  const savedDate   = new Date(savedAt).toLocaleDateString("vi-VN");
+
+  return (
+    <div
+      className="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col gap-4 shadow-sm hover:shadow-lg hover:border-[#1e3fae]/30 hover:-translate-y-0.5 transition-all duration-200 group cursor-pointer min-h-[210px]"
+      onClick={() => onApply(job)}
+    >
+      {/* ── Logo + Title + Company ── */}
+      <div className="flex items-start gap-3.5">
+        {/* Logo — larger 56px */}
+        <div
+          className="w-14 h-14 rounded-xl border border-slate-100 flex items-center justify-center shrink-0 overflow-hidden shadow-sm"
+          style={!logoUrl ? { background: jobColor(job.id) } : {}}
+        >
+          {logoUrl ? (
+            <img src={logoUrl} alt={companyName} className="w-full h-full object-contain p-1.5 bg-white" />
+          ) : (
+            <span className="text-white text-xl font-black">{job.title.charAt(0).toUpperCase()}</span>
+          )}
+        </div>
+
+        <div className="flex-1 min-w-0">
+          {/* Badges */}
+          <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
+            <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+              Đã lưu {savedDate}
+            </span>
+            {job.jobType && (
+              <span className="text-[10px] font-bold text-[#1e3fae] bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-full">
+                {job.jobType}
+              </span>
+            )}
+            {job.jobLevel && (
+              <span className="text-[10px] font-bold text-violet-700 bg-violet-50 border border-violet-100 px-2 py-0.5 rounded-full">
+                {job.jobLevel}
+              </span>
+            )}
+          </div>
+
+          {/* Title */}
+          <h3 className="font-bold text-slate-900 text-[14.5px] leading-snug line-clamp-2 group-hover:text-[#1e3fae] transition-colors mb-0.5">
+            {job.title}
+          </h3>
+          {/* Company */}
+          <p className="text-[12px] text-slate-400 font-medium truncate" title={companyName}>
+            {companyName}
+          </p>
+        </div>
+      </div>
+
+      {/* ── Salary + Location ── */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-[12px] font-bold text-slate-700 bg-slate-100 px-3 py-1 rounded-lg whitespace-nowrap">
+          {salary}
+        </span>
+        {location && (
+          <span className="flex items-center gap-1 text-[12px] font-medium text-slate-500 bg-slate-50 border border-slate-100 px-3 py-1 rounded-lg whitespace-nowrap">
+            <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+            {location.length > 18 ? location.slice(0, 18) + "..." : location}
+          </span>
+        )}
+      </div>
+
+      {/* ── Remove + spacer ── */}
+      <div className="flex items-center justify-between mt-auto pt-1 border-t border-slate-50">
+        <span className="text-[11px] text-slate-400 font-medium">Nhấn để ứng tuyển</span>
+        <button
+          onClick={e => { e.stopPropagation(); onRemove(job.id, job.title); }}
+          title="Bỏ lưu"
+          className="flex items-center gap-1.5 text-[11.5px] font-semibold text-red-400 hover:text-red-600 transition-colors px-2 py-1 rounded-lg hover:bg-red-50"
+        >
+          <Heart className="w-3.5 h-3.5 fill-red-400" />
+          Bỏ lưu
+        </button>
+      </div>
+
+      {/* ── Apply button — hover only ── */}
+      <div className="overflow-hidden transition-all duration-200 ease-out max-h-0 group-hover:max-h-12 opacity-0 group-hover:opacity-100">
+        <button
+          onClick={e => { e.stopPropagation(); onApply(job); }}
+          className="w-full h-9 bg-[#1e3fae] hover:bg-[#162f8c] text-white text-[13px] font-bold rounded-xl transition-colors shadow-sm shadow-[#1e3fae]/20 flex items-center justify-center"
+        >
+          Ứng tuyển ngay →
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
 export default function SavedJobs() {
   const navigate = useNavigate();
-  const [bookmarks, setBookmarks] = useState<SavedJobItem[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const [totalPages, setTotalPages] = useState<number>(1);
-  const [totalItems, setTotalItems] = useState<number>(0);
-  const itemsPerPage = 5;
+  const [bookmarks, setBookmarks]   = useState<SavedJobItem[]>([]);
+  const [loading, setLoading]       = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const PER_PAGE = 9;
 
   const fetchSavedJobs = async (page: number) => {
     setLoading(true);
     try {
-      const res = await candidateService.getBookmarks({ page, limit: itemsPerPage });
+      const res = await candidateService.getBookmarks({ page, limit: PER_PAGE });
       setBookmarks(res.bookmarks || []);
       setTotalPages(res.total_pages || 1);
       setTotalItems(res.total_items || 0);
-      setCurrentPage(res.current_page || 1);
+      setCurrentPage(res.current_page || page);
     } catch (err) {
-      console.error("Error fetching saved jobs:", err);
+      console.error("Error:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchSavedJobs(currentPage);
-  }, [currentPage]);
+  useEffect(() => { fetchSavedJobs(currentPage); }, [currentPage]);
 
-  const handleApply = (job: SavedJobItem["job"]) => {
-    navigate(`/candidate/apply/${job.id}`, { state: { job } });
-  };
+  const handleApply  = (job: SavedJobItem["job"]) => navigate(`/candidate/apply/${job.id}`, { state: { job, from: '/candidate/saved' } });
 
-  const handleRemoveBookmark = async (jobId: string, title: string) => {
-    if (!window.confirm(`Bạn có chắc chắn muốn bỏ lưu công việc "${title}" không?`)) {
-      return;
-    }
+  const handleRemove = async (jobId: string, title: string) => {
+    if (!window.confirm(`Bỏ lưu công việc "${title}"?`)) return;
     try {
       await candidateService.toggleBookmark(jobId);
-      // If we are on page 1 and remove the last item, page count might change
-      // A simple reload is safest and keeps pagination metadata correct
-      if (bookmarks.length === 1 && currentPage > 1) {
-        setCurrentPage(prev => prev - 1);
-      } else {
-        fetchSavedJobs(currentPage);
-      }
+      if (bookmarks.length === 1 && currentPage > 1) setCurrentPage(p => p - 1);
+      else fetchSavedJobs(currentPage);
     } catch (err) {
-      console.error("Lỗi khi bỏ lưu tin:", err);
-      alert("Có lỗi xảy ra, vui lòng thử lại sau.");
+      console.error(err);
+      alert("Có lỗi xảy ra, vui lòng thử lại.");
     }
+  };
+
+  const buildPages = (): (number | "...")[] => {
+    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
+    const res: (number | "...")[] = [1];
+    if (currentPage > 3) res.push("...");
+    for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) res.push(i);
+    if (currentPage < totalPages - 2) res.push("...");
+    res.push(totalPages);
+    return res;
   };
 
   return (
-    <div className="max-w-[1000px] mx-auto space-y-6 pb-20">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="max-w-[1100px] mx-auto py-6 px-4 md:px-8 space-y-5 pb-20">
+
+      {/* ── Header ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-[28px] font-bold text-slate-900 mb-1">Việc làm đã lưu</h1>
-          <p className="text-slate-500 text-[15px]">
-            Bạn đang lưu <span className="font-bold text-[#1e3fae]">{totalItems} việc làm</span>
+          <h1 className="text-[22px] font-black text-slate-900 tracking-tight">Việc làm đã lưu</h1>
+          <p className="text-slate-500 text-sm mt-0.5">
+            Bạn đang lưu{" "}
+            <span className="font-bold text-[#1e3fae]">{totalItems} việc làm</span>
           </p>
         </div>
         <button
           onClick={() => navigate("/candidate/recommended")}
-          className="flex-shrink-0 px-5 py-2.5 rounded-xl border border-[#1e3fae] text-[#1e3fae] text-sm font-bold hover:bg-blue-50 transition-all flex items-center justify-center gap-2"
+          className="flex items-center gap-2 px-4 py-2 bg-white border border-[#1e3fae]/30 text-[#1e3fae] rounded-xl text-sm font-bold hover:bg-blue-50 transition-all shadow-sm whitespace-nowrap"
         >
-          Khám phá thêm việc làm
+          <Sparkles className="w-4 h-4" />
+          Khám phá thêm
           <ArrowRight className="w-4 h-4" />
         </button>
       </div>
 
+      {/* ── Content ── */}
       {loading ? (
-        <div className="flex justify-center p-20">
-          <Loader2 className="animate-spin w-10 h-10 text-[#2143ad]" />
+        <div className="flex justify-center py-24">
+          <Loader2 className="animate-spin w-10 h-10 text-[#1e3fae]" />
         </div>
       ) : bookmarks.length === 0 ? (
-        <div className="bg-white border border-slate-200 rounded-[20px] py-20 px-6 text-center shadow-sm">
-          <div className="size-16 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-100">
-            <Heart className="w-8 h-8" />
+        <div className="flex flex-col items-center justify-center py-24 bg-white rounded-2xl border border-dashed border-slate-200 text-center">
+          <div className="size-14 rounded-2xl bg-red-50 flex items-center justify-center mb-4">
+            <Heart className="w-7 h-7 text-red-300" />
           </div>
-          <h3 className="text-lg font-bold text-slate-950 mb-1">Chưa có việc làm nào được lưu</h3>
-          <p className="text-slate-500 text-sm max-w-sm mx-auto mb-6">
-            Lưu các việc làm bạn quan tâm khi tìm kiếm để dễ dàng quản lý và ứng tuyển sau này.
-          </p>
+          <p className="font-bold text-slate-700 mb-1">Chưa có việc làm nào được lưu</p>
+          <p className="text-slate-400 text-sm mb-5">Lưu các việc làm bạn quan tâm để ứng tuyển sau.</p>
           <button
             onClick={() => navigate("/candidate/recommended")}
-            className="px-6 py-2.5 bg-[#2143ad] hover:bg-[#162f8c] text-white font-bold rounded-xl transition-all shadow-md shadow-blue-100"
+            className="px-6 py-2.5 bg-[#1e3fae] hover:bg-[#162f8c] text-white font-bold rounded-xl transition-all shadow-md shadow-[#1e3fae]/20 text-sm"
           >
             Tìm việc làm ngay
           </button>
         </div>
       ) : (
-        <div className="space-y-5">
-          {bookmarks.map((item, index) => {
-            const { job, savedAt } = item;
-            const coverImage = COVER_IMAGES[index % COVER_IMAGES.length];
-            
-            const fmt = (n: number) => {
-              if (n >= 1_000_000) {
-                const inMillion = n / 1_000_000;
-                return `${inMillion.toLocaleString("vi-VN", { maximumFractionDigits: 1 })} Tr`;
-              } else if (n >= 1_000) {
-                const inThousand = n / 1_000;
-                return `${inThousand.toLocaleString("vi-VN", { maximumFractionDigits: 0 })} N`;
-              }
-              return `${n.toLocaleString("vi-VN")} đ`;
-            };
+        <>
+          {/* 3-column grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {bookmarks.map(item => (
+              <SavedJobCard
+                key={item.bookmarkId}
+                item={item}
+                onApply={handleApply}
+                onRemove={handleRemove}
+              />
+            ))}
+          </div>
 
-            let salaryText = 'Thỏa thuận';
-            if (job.salaryMin && job.salaryMax) {
-              salaryText = `${fmt(job.salaryMin)} – ${fmt(job.salaryMax)}`;
-            } else if (job.salaryMin) {
-              salaryText = `Từ ${fmt(job.salaryMin)}`;
-            } else if (job.salaryMax) {
-              salaryText = `Đến ${fmt(job.salaryMax)}`;
-            }
-
-            const displayTags: string[] = [];
-            if (job.jobType) displayTags.push(job.jobType);
-
-            return (
-              <div key={item.bookmarkId} className="bg-white border border-slate-200 rounded-[20px] flex flex-col md:flex-row overflow-hidden hover:border-[#1e3fae]/30 hover:shadow-lg transition-all duration-300 group shadow-sm h-full md:h-[220px]">
-                <div className="md:w-[260px] relative h-[160px] md:h-full flex-shrink-0 border-r border-slate-100">
-                  <img src={coverImage} alt={job.title} className="w-full h-full object-cover" />
-                  <div className="absolute top-4 left-4 px-3 py-1 rounded-lg bg-black/60 backdrop-blur-sm text-white text-[11px] font-medium flex items-center gap-1.5 shadow-sm">
-                    <Calendar className="w-3.5 h-3.5" />
-                    Lưu: {new Date(savedAt).toLocaleDateString("vi-VN")}
-                  </div>
-                </div>
-                
-                <div className="flex-1 p-6 md:p-7 flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-start justify-between mb-2.5">
-                      <h2 className="text-[20px] font-bold text-slate-900 group-hover:text-[#2143ad] transition-colors line-clamp-1">{job.title}</h2>
-                      <button 
-                        onClick={() => handleRemoveBookmark(job.id, job.title)}
-                        className="text-red-500 hover:text-red-600 transition-colors p-1"
-                        title="Bỏ lưu việc làm này"
-                      >
-                        <Heart className="w-6 h-6 fill-red-500 text-red-500 hover:scale-110 transition-transform" />
-                      </button>
-                    </div>
-                    
-                    <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[14px] font-medium mb-4">
-                      <span className="flex items-center gap-2 text-slate-500 max-w-[200px] truncate" title={job.company?.name || 'Công ty bảo mật'}>
-                        <Building2 className="w-4.5 h-4.5 text-slate-400 flex-shrink-0" />
-                        {job.company?.name || 'Công ty bảo mật'}
-                      </span>
-                      <span className="flex items-center gap-2 text-slate-500">
-                        <MapPin className="w-4.5 h-4.5 text-slate-400" />
-                        {job.location || job.company?.city || 'Thỏa thuận'}
-                      </span>
-                      <span className="flex items-center gap-2 text-[#2143ad] font-bold">
-                        <Banknote className="w-4.5 h-4.5 text-[#2143ad]" />
-                        {salaryText}
-                      </span>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      {displayTags.length > 0 ? displayTags.map((tag: string, idx: number) => (
-                        <span key={idx} className="px-2.5 py-1 text-[12px] font-semibold rounded-lg bg-slate-100 text-slate-600">
-                          {tag}
-                        </span>
-                      )) : (
-                        <span className="px-2.5 py-1 text-[12px] font-semibold rounded-lg bg-slate-100 text-slate-600">
-                          Việc làm tốt
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex gap-4 pt-1">
-                    <button 
-                      onClick={() => handleApply(job)}
-                      className="flex-1 px-6 py-2.5 bg-[#2143ad] hover:bg-[#162f8c] text-white text-[14px] font-bold rounded-xl transition-colors flex items-center justify-center gap-2 shadow-sm"
-                    >
-                      Ứng tuyển ngay
-                    </button>
-                    <Link to={`/candidate/jobs/${job.id}`} className="flex-1 px-6 py-2.5 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 hover:text-slate-900 text-[14px] font-bold rounded-xl transition-all flex items-center justify-center shadow-sm">
-                      Xem chi tiết
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {!loading && bookmarks.length > 0 && totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 pt-8">
-          <button 
-            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-            disabled={currentPage === 1}
-            className="size-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-slate-400 hover:bg-slate-50 hover:text-slate-600 disabled:opacity-50 disabled:pointer-events-none transition-colors shadow-sm"
-          >
-            &lt;
-          </button>
-          
-          {Array.from({ length: totalPages }).map((_, idx) => {
-            const pageNum = idx + 1;
-            return (
+          {/* ── Pagination ── */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-1.5 pt-4">
               <button
-                key={pageNum}
-                onClick={() => setCurrentPage(pageNum)}
-                className={`size-10 rounded-xl flex items-center justify-center font-bold text-[15px] shadow-sm transition-colors ${
-                  currentPage === pageNum
-                    ? "bg-[#2143ad] text-white"
-                    : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
-                }`}
-              >
-                {pageNum}
-              </button>
-            );
-          })}
-          
-          <button 
-            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-            disabled={currentPage === totalPages}
-            className="size-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-slate-500 hover:bg-slate-50 disabled:opacity-50 disabled:pointer-events-none transition-colors shadow-sm"
-          >
-            &gt;
-          </button>
-        </div>
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="w-9 h-9 rounded-full border border-slate-200 bg-white flex items-center justify-center text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none transition-all shadow-sm font-bold text-base"
+              >‹</button>
+
+              {buildPages().map((p, i) =>
+                p === "..." ? (
+                  <span key={`e${i}`} className="w-9 h-9 flex items-center justify-center text-slate-400 text-sm">…</span>
+                ) : (
+                  <button key={p} onClick={() => setCurrentPage(p as number)}
+                    className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm transition-all shadow-sm border ${
+                      currentPage === p
+                        ? "bg-[#1e3fae] text-white border-[#1e3fae] shadow-md shadow-[#1e3fae]/25"
+                        : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                    }`}
+                  >{p}</button>
+                )
+              )}
+
+              <span className="px-3 h-9 flex items-center rounded-full border border-slate-200 bg-white text-slate-500 text-[12px] font-semibold shadow-sm">
+                {currentPage} / {totalPages} trang
+              </span>
+
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="w-9 h-9 rounded-full border border-slate-200 bg-white flex items-center justify-center text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none transition-all shadow-sm font-bold text-base"
+              >›</button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

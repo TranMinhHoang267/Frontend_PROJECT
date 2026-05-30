@@ -60,4 +60,9 @@ export const applicationService = {
     const res = await apiClient.delete(`/applications/${id}/rejected`);
     return res.data;
   },
+  
+  getPreviousApplication: async (jobId: string) => {
+    const res = await apiClient.get(`/applications/job/${jobId}/previous`);
+    return res.data?.data ?? res.data;
+  },
 };

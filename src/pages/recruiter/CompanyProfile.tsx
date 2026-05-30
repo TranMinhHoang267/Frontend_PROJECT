@@ -96,7 +96,9 @@ export default function CompanyProfile() {
     try {
       setIsUploadingLogo(true);
       const res = await employerService.updateLogo(file);
-      setProfile(prev => prev ? { ...prev, logo_url: res.logo_url } : null);
+      // backend có thể trả logoUrl hoặc logo_url — dùng cái nào có
+      const newUrl = res.logoUrl || null;
+      setProfile(prev => prev ? { ...prev, logoUrl: newUrl } : null);
       alert("Cập nhật logo thành công!");
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
@@ -120,7 +122,7 @@ export default function CompanyProfile() {
       await employerService.deleteLogo(); 
       
       // Cập nhật lại state profile, set logo_url về null hoặc rỗng
-      setProfile(prev => prev ? { ...prev, logo_url: null } : null);
+      setProfile(prev => prev ? { ...prev, logoUrl: null } : null);
       alert("Xóa logo thành công!");
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
@@ -200,7 +202,7 @@ export default function CompanyProfile() {
     );
   }
 
-  const logoUrl = employerService.getLogoUrl(profile.logo_url);
+  const logoUrl = employerService.getLogoUrl(profile.logoUrl);
   const statusColor = profile.status === 'approved' ? 'bg-green-100 text-green-700' :
                       profile.status === 'pending'  ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700';
   const statusLabel  = profile.status === 'approved' ? 'Đã duyệt' :
@@ -295,10 +297,10 @@ export default function CompanyProfile() {
               </div>
 
               {/* Rejection reason */}
-              {profile.status === 'rejected' && profile.rejection_reason && (
+              {profile.status === 'rejected' && profile.rejectionReason && (
                 <div className="mb-3 flex items-start gap-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 max-w-xl">
                   <span className="font-bold flex-shrink-0">Lý do từ chối:</span>
-                  <span>{profile.rejection_reason}</span>
+                  <span>{profile.rejectionReason}</span>
                 </div>
               )}
 
@@ -491,7 +493,7 @@ export default function CompanyProfile() {
               </div>
               <div>
                 <p className="text-sm font-bold text-slate-900 mb-1">Email tuyển dụng</p>
-                <p className="text-sm text-slate-500">{profile.recruiter?.email || "Chưa cập nhật"}</p>
+                <p className="text-sm text-slate-500">{profile.recruiter?.email || 'Chưa cập nhật'}</p>
               </div>
             </div>
 
@@ -501,7 +503,7 @@ export default function CompanyProfile() {
               </div>
               <div>
                 <p className="text-sm font-bold text-slate-900 mb-1">Số điện thoại</p>
-                <p className="text-sm text-slate-500">{profile.recruiter?.phone || "Chưa cập nhật"}</p>
+                <p className="text-sm text-slate-500">{profile.recruiter?.phone || 'Chưa cập nhật'}</p>
               </div>
             </div>
 

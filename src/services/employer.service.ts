@@ -1,10 +1,10 @@
 import { apiClient } from '../config/axios';
 
 export interface RecruiterInfo {
-  full_name?: string;
+  fullName?: string;
   email?: string;
   phone?: string;
-  avatar_url?: string;
+  avatarUrl?: string;
 }
 
 export interface CompanyProfileData {
@@ -12,12 +12,12 @@ export interface CompanyProfileData {
   name: string;
   description: string | null;
   website: string | null;
-  logo_url: string | null;
+  logoUrl: string | null;
   address: string | null;
   city: string | null;
   size: string | null;
   status: string;
-  rejection_reason: string | null;
+  rejectionReason: string | null;
   recruiter: RecruiterInfo;
 }
 
@@ -67,27 +67,36 @@ export const employerService = {
     return res.data?.data ?? res.data;
   },
 
-  updateLogo: async (file: File): Promise<{ logo_url: string }> => {
+  updateLogo: async (file: File): Promise<{ logoUrl: string }> => {
     const fd = new FormData();
     fd.append('logo', file);
     const res = await apiClient.put('/employer/logo', fd);
-    return res.data?.data ?? res.data;
+    const d = res.data?.data ?? res.data;
+    // Backend trả { logo_url: '...' } — map sang camelCase
+    if (d && d.logo_url && !d.logoUrl) {
+      d.logoUrl = d.logo_url;
+    }
+    return d;
   },
 
   deleteLogo: async (): Promise<void> => {
     await apiClient.delete('/employer/logo');
   },
 
-  // Hàm chuyển đổi đường dẫn logo cục bộ thành URL hoàn chỉnh
+  // Chuyển path tương đối (/uploads/logos/xxx.webp) thành URL đầy đủ
   getLogoUrl: (url?: string | null): string => {
     if (!url) return '';
     if (url.startsWith('http')) return url;
-    const baseUrl = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/api\/?$/, '');
-    return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
+    // Bỏ /api ở cuối base URL để ghép đúng đường dẫn file tĩnh
+    const baseUrl = (import.meta.env.VITE_API_BASE_URL || '')
+      .replace(/\/api\/?$/, '')
+      .replace(/\/$/, '');
+    const cleanPath = url.startsWith('/') ? url : `/${url}`;
+    return `${baseUrl}${cleanPath}`;
   },
 
   getDashboard: async (): Promise<DashboardStats> => {
     const res = await apiClient.get('/employer/dashboard');
     return res.data?.data ?? res.data;
-  }
+  },
 };

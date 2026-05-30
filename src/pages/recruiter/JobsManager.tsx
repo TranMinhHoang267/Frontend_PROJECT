@@ -2,10 +2,12 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Loader2, Users, Eye, PauseCircle, PlayCircle, ChevronRight, Search, Trash2 } from "lucide-react";
 import { jobService } from "../../services/job.service";
+import { employerApplicationService } from "../../services/employerApplication.service";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 interface Applicant {
   id: string;           // application_id
+  resumeId?: string;
   full_name: string;
   email: string;
   applied_at: string;
@@ -67,6 +69,9 @@ const ApplicantDrawer = ({
   onClose,
   onDeleteApp,
   onViewApp,
+  scores,
+  scoringLoading,
+  onScoreCV,
 }: {
   job: JobWithApplicants;
   applicants: Applicant[];
@@ -74,6 +79,9 @@ const ApplicantDrawer = ({
   onClose: () => void;
   onDeleteApp: (id: string) => void;
   onViewApp: (id: string) => void;
+  scores: Record<string, { score: number; explanation: string }>;
+  scoringLoading: boolean;
+  onScoreCV: () => void;
 }) => (
   <div className="fixed inset-0 z-50 flex justify-end" onClick={onClose}>
     <div className="absolute inset-0 bg-black/20 backdrop-blur-[2px]" />
@@ -98,11 +106,27 @@ const ApplicantDrawer = ({
       </div>
 
       {/* Count Banner */}
-      <div className="mx-6 mt-5 mb-1 flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3">
-        <Users className="w-5 h-5 text-[#1e3fae] flex-shrink-0" />
-        <span className="text-sm font-bold text-[#1e3fae]">
-          {loading ? "Đang tải..." : `${applicants.length} ứng viên đã nộp hồ sơ`}
-        </span>
+      <div className="mx-6 mt-5 mb-1 flex items-center justify-between gap-3 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3">
+        <div className="flex items-center gap-3">
+          <Users className="w-5 h-5 text-[#1e3fae] flex-shrink-0" />
+          <span className="text-sm font-bold text-[#1e3fae]">
+            {loading ? "Đang tải..." : `${applicants.length} ứng viên`}
+          </span>
+        </div>
+        {!loading && applicants.length > 0 && (
+          <button
+            onClick={onScoreCV}
+            disabled={scoringLoading}
+            className="flex items-center gap-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all disabled:opacity-50 flex-shrink-0 shadow-sm"
+          >
+            {scoringLoading ? (
+              <Loader2 className="w-3 h-3 animate-spin" />
+            ) : (
+              <span className="material-symbols-outlined text-[15px]">psychology</span>
+            )}
+            Chấm điểm AI
+          </button>
+        )}
       </div>
 
       {/* List */}
@@ -120,37 +144,60 @@ const ApplicantDrawer = ({
             <p className="text-slate-400 text-sm mt-1">Tin đăng đang được lan tỏa đến ứng viên.</p>
           </div>
         ) : (
-          applicants.map((ap, i) => (
-            <div 
-              key={ap.id} 
-              onClick={() => onViewApp(ap.id)}
-              className="group flex items-center gap-3 p-4 rounded-xl bg-slate-50 hover:bg-white hover:shadow-md hover:border-blue-200 transition-all cursor-pointer border border-slate-100 relative"
-            >
-              <div className="size-10 rounded-full bg-[#1e3fae]/10 text-[#1e3fae] flex items-center justify-center font-bold text-sm flex-shrink-0">
-                {ap.full_name?.charAt(0)?.toUpperCase() ?? String(i + 1)}
+          applicants.map((ap, i) => {
+            const scoreInfo = ap.resumeId ? (scores[ap.resumeId] || scores[ap.id]) : scores[ap.id];
+            return (
+              <div 
+                key={ap.id} 
+                onClick={() => onViewApp(ap.id)}
+                className="group flex flex-col gap-2.5 p-4 rounded-xl bg-slate-50 hover:bg-white hover:shadow-md hover:border-blue-200 transition-all cursor-pointer border border-slate-100 relative"
+              >
+                <div className="flex items-center gap-3 w-full">
+                  <div className="size-10 rounded-full bg-[#1e3fae]/10 text-[#1e3fae] flex items-center justify-center font-bold text-sm flex-shrink-0">
+                    {ap.full_name?.charAt(0)?.toUpperCase() ?? String(i + 1)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="font-bold text-sm text-slate-800 truncate">{ap.full_name}</p>
+                      {scoreInfo && (
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-extrabold flex items-center gap-0.5 ${
+                          scoreInfo.score >= 80 ? "bg-emerald-50 text-emerald-700 border border-emerald-200" :
+                          scoreInfo.score >= 50 ? "bg-amber-50 text-amber-700 border border-amber-200" :
+                          "bg-rose-50 text-rose-700 border border-rose-200"
+                        }`}>
+                          <span className="material-symbols-outlined text-[11px]">grade</span>
+                          {scoreInfo.score}/100
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-500 truncate">{ap.email}</p>
+                  </div>
+                  <div className="text-right flex-shrink-0 mr-2">
+                    <span className="text-[10px] font-semibold text-slate-400">
+                      {ap.applied_at ? new Date(ap.applied_at).toLocaleDateString("vi-VN") : ""}
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                     <button 
+                      onClick={(e) => { e.stopPropagation(); onDeleteApp(ap.id); }}
+                      className="size-8 flex items-center justify-center rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all"
+                      title="Xóa hồ sơ này"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                    <ChevronRight className="w-4 h-4 text-slate-300" />
+                  </div>
+                </div>
+                {scoreInfo && (
+                  <div className="text-[11px] text-slate-600 pl-2 border-l-2 border-indigo-400 bg-slate-100/50 p-2 rounded leading-normal">
+                    <span className="font-bold text-indigo-700">Đánh giá AI: </span>
+                    {scoreInfo.explanation}
+                  </div>
+                )}
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-bold text-sm text-slate-800 truncate">{ap.full_name}</p>
-                <p className="text-xs text-slate-500 truncate">{ap.email}</p>
-              </div>
-              <div className="text-right flex-shrink-0 mr-2">
-                <span className="text-[10px] font-semibold text-slate-400">
-                  {ap.applied_at ? new Date(ap.applied_at).toLocaleDateString("vi-VN") : ""}
-                </span>
-              </div>
-              
-              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                 <button 
-                  onClick={(e) => { e.stopPropagation(); onDeleteApp(ap.id); }}
-                  className="size-8 flex items-center justify-center rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all"
-                  title="Xóa hồ sơ này"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-                <ChevronRight className="w-4 h-4 text-slate-300" />
-              </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>
@@ -168,6 +215,8 @@ export default function JobsManager() {
   const [selectedJob, setSelectedJob] = useState<JobWithApplicants | null>(null);
   const [applicants, setApplicants] = useState<Applicant[]>([]);
   const [loadingApplicants, setLoadingApplicants] = useState(false);
+  const [scores, setScores] = useState<Record<string, { score: number; explanation: string }>>({});
+  const [scoringLoading, setScoringLoading] = useState(false);
 
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ type: "ok" | "err"; msg: string } | null>(null);
@@ -222,6 +271,7 @@ export default function JobsManager() {
   const openDrawer = async (job: JobWithApplicants) => {
     setSelectedJob(job);
     setApplicants([]);
+    setScores({});
     setLoadingApplicants(true);
     try {
       const res = await jobService.getApplicants(job.id);
@@ -232,19 +282,25 @@ export default function JobsManager() {
 
       interface RawApplicant {
         application_id?: string;
+        applicationId?: string;
         id?: string;
-        candidate?: { full_name?: string; email?: string };
+        resume_id?: string;
+        resumeId?: string;
+        candidate?: { full_name?: string; fullName?: string; email?: string };
         full_name?: string;
+        fullName?: string;
         email?: string;
         applied_at?: string;
+        appliedAt?: string;
         createdAt?: string;
         status: string;
       }
       const mapped: Applicant[] = (rawArr as RawApplicant[]).map(item => ({
-        id:         item.application_id || item.id || "",
-        full_name:  item.candidate?.full_name ?? item.full_name ?? "Ứng viên",
+        id:         item.applicationId || item.application_id || item.id || "",
+        resumeId:   item.resumeId || item.resume_id || "",
+        full_name:  item.candidate?.fullName ?? item.candidate?.full_name ?? item.fullName ?? item.full_name ?? "Ứng viên",
         email:      item.candidate?.email ?? item.email ?? "",
-        applied_at: item.applied_at || item.createdAt || "",
+        applied_at: item.appliedAt || item.applied_at || item.createdAt || "",
         status:     item.status,
       }));
       setApplicants(mapped);
@@ -252,6 +308,35 @@ export default function JobsManager() {
       setApplicants([]);
     } finally {
       setLoadingApplicants(false);
+    }
+  };
+
+  const handleScoreCVs = async () => {
+    if (!selectedJob) return;
+    setScoringLoading(true);
+    try {
+      const res = await employerApplicationService.scoreCVs(selectedJob.id);
+      if (res.type === "SUCCESS" && Array.isArray(res.data)) {
+        const scoresMap: Record<string, { score: number; explanation: string }> = {};
+        res.data.forEach((item: { resumeId?: string; applicationId?: string; score: number; explanation: string }) => {
+          const key = item.resumeId || item.applicationId;
+          if (key) {
+            scoresMap[key] = {
+              score: item.score,
+              explanation: item.explanation
+            };
+          }
+        });
+        setScores(scoresMap);
+        showToast("ok", "Chấm điểm CV bằng AI thành công!");
+      } else {
+        showToast("err", res.message || "Không thể chấm điểm CV.");
+      }
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { message?: string } } };
+      showToast("err", error.response?.data?.message || "Lỗi khi chấm điểm CV bằng AI.");
+    } finally {
+      setScoringLoading(false);
     }
   };
 
@@ -327,6 +412,9 @@ export default function JobsManager() {
           onClose={() => setSelectedJob(null)}
           onDeleteApp={handleDeleteApp}
           onViewApp={(id) => navigate(`/recruiter/candidates/${id}`)}
+          scores={scores}
+          scoringLoading={scoringLoading}
+          onScoreCV={handleScoreCVs}
         />
       )}
 

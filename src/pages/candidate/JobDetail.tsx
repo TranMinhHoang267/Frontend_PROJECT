@@ -4,7 +4,7 @@ import {
   Building2, Send, ExternalLink, Loader2, AlertCircle,
   Gift, Shield, GraduationCap, Coffee, Star, Zap, Heart, Users
 } from "lucide-react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useLocation } from "react-router-dom";
 import { jobService } from "../../services/job.service";
 import { employerService } from "../../services/employer.service";
 // Danh sách icon phúc lợi có thể chọn
@@ -172,6 +172,8 @@ function getBenefitIcon(iconKey?: string) {
 export default function JobDetail() {
   const { jobId } = useParams<{ jobId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const fromPath = location.state?.from;
   const [job, setJob] = useState<JobData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -257,9 +259,19 @@ export default function JobDetail() {
 
         {/* Breadcrumb */}
         <div className="flex items-center text-sm text-slate-500 mb-6">
-          <Link to="/candidate/recommended" className="hover:text-blue-600">
-            Xem chi tiết
-          </Link>
+          {fromPath ? (
+            <button
+              onClick={() => navigate(-1)}
+              className="hover:text-blue-600 transition-colors flex items-center gap-1 font-medium"
+            >
+              <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+              Quay lại nộp đơn
+            </button>
+          ) : (
+            <Link to="/candidate/recommended" className="hover:text-blue-600">
+              Gợi ý việc làm
+            </Link>
+          )}
           <ChevronRight className="w-4 h-4 mx-1" />
           <span className="text-slate-900 font-semibold">{job.title}</span>
         </div>

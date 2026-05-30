@@ -168,57 +168,58 @@ export default function CandidateDetail() {
   };
 
   return (
-    <div className="p-6 lg:p-8 max-w-7xl mx-auto w-full" style={{ fontFamily: "'Inter', sans-serif" }}>
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full bg-[#f8fafc] min-h-screen" style={{ fontFamily: "'Inter', sans-serif" }}>
 
       {/* ── Breadcrumb ── */}
-      <div className="flex items-center gap-2 mb-8 text-sm text-slate-500">
+      <div className="flex items-center gap-2 mb-6 text-sm text-slate-500">
         <button
           onClick={() => navigate("/recruiter/candidates")}
-          className="hover:text-slate-900 transition-colors"
+          className="hover:text-blue-600 transition-colors flex items-center gap-1 font-medium"
         >
-          Chi tiết ứng viên
+          <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+          Danh sách ứng viên
         </button>
         <span>/</span>
         <span className="text-slate-900 font-semibold">{fullName}</span>
       </div>
 
-      <div className="flex flex-col xl:flex-row gap-8 items-start">
+      <div className="flex flex-col lg:flex-row gap-8 items-start relative">
 
         {/* ══════════════════════ LEFT CONTENT ══════════════════════ */}
-        <div className="flex-1 min-w-0 space-y-10">
+        <div className="flex-1 min-w-0 space-y-8 w-full">
 
           {/* ── Hero Header ── */}
-          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6">
+          <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm hover:shadow-md transition-shadow duration-300 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
             {/* Avatar + Name */}
             <div className="flex items-center gap-5">
               <div className="relative flex-shrink-0">
-                <div className="w-[88px] h-[88px] rounded-full overflow-hidden bg-gradient-to-br from-blue-100 to-blue-200 border-[3px] border-white shadow-md flex items-center justify-center text-blue-700 text-2xl font-bold">
+                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden bg-gradient-to-br from-blue-500 via-indigo-600 to-violet-500 border-[4px] border-white shadow-xl flex items-center justify-center text-white text-2xl sm:text-3xl font-extrabold tracking-wider ring-4 ring-blue-500/5">
                   {avatarSrc ? (
-                    <img src={avatarSrc} alt={fullName} className="w-full h-full object-cover" />
+                    <img src={avatarSrc} alt={fullName} className="w-full h-full object-cover animate-fade-in" />
                   ) : (
                     <span>{avatarInitials}</span>
                   )}
                 </div>
-                <span className="absolute bottom-1 right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white block"></span>
+                <span className="absolute bottom-1 right-1 w-4 h-4 bg-green-500 rounded-full border-[3px] border-white shadow-sm block animate-pulse"></span>
               </div>
               <div>
-                <div className="flex items-center gap-3">
-                  <h1 className="text-2xl font-extrabold text-slate-900 leading-tight">{fullName}</h1>
-                  <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border ${statusInfo.color}`}>
+                <div className="flex flex-wrap items-center gap-3">
+                  <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 leading-tight">{fullName}</h1>
+                  <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border shadow-sm ${statusInfo.color}`}>
                     <span className="material-symbols-outlined text-[14px]">{statusInfo.icon}</span>
                     {statusInfo.label.toUpperCase()}
                   </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-2 text-sm">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-2.5 text-sm">
                   {headline && (
-                    <div className="flex items-center gap-1 text-blue-600 font-bold bg-blue-50/50 px-2 py-0.5 rounded-lg border border-blue-100/50 shadow-sm">
-                      <span className="material-symbols-outlined text-[16px]">verified</span>
+                    <div className="flex items-center gap-1 text-blue-600 font-bold bg-blue-50 px-2.5 py-0.5 rounded-lg border border-blue-100 shadow-sm">
+                      <span className="material-symbols-outlined text-[16px] text-blue-500">verified</span>
                       {headline}
                     </div>
                   )}
                   {candidateLoc && (
-                    <div className="flex items-center gap-1.5 text-slate-500 font-medium">
-                      <span className="material-symbols-outlined text-[18px]">location_on</span>
+                    <div className="flex items-center gap-1.5 text-slate-500 font-semibold bg-slate-50 px-2.5 py-0.5 rounded-lg border border-slate-100">
+                      <span className="material-symbols-outlined text-[16px] text-slate-400">location_on</span>
                       {candidateLoc}
                     </div>
                   )}
@@ -226,29 +227,39 @@ export default function CandidateDetail() {
               </div>
             </div>
 
-            {/* Action buttons */}
+            {/* Quick Fast Actions in Hero */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleOpenCv('view')}
+                disabled={cvLoading}
+                className="flex items-center gap-1.5 px-4 py-2 border border-slate-200 hover:border-blue-200 hover:bg-blue-50 rounded-xl text-xs font-bold text-slate-700 hover:text-blue-600 transition-all disabled:opacity-50"
+              >
+                <span className="material-symbols-outlined text-[16px]">visibility</span>
+                Xem CV nhanh
+              </button>
+            </div>
           </div>
 
           {/* ── Thư ứng tuyển (Cover Letter) ── */}
           {coverLetter && (
-            <section>
-              <SectionDivider label="THƯ ỨNG TUYỂN" />
-              <div className="bg-amber-50/50 border border-amber-100 rounded-2xl p-6 relative">
-                 <span className="material-symbols-outlined absolute top-4 right-4 text-amber-200 text-4xl">format_quote</span>
-                 <p className="text-slate-700 leading-relaxed text-[15px] whitespace-pre-line relative z-10 font-medium">
-                   {coverLetter}
+            <section className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm">
+              <SectionDivider label="THƯ ỨNG TUYỂN" icon="format_quote" />
+              <div className="bg-amber-50/30 border border-amber-100/70 rounded-2xl p-6 relative">
+                 <span className="material-symbols-outlined absolute top-4 right-4 text-amber-200/50 text-5xl select-none">format_quote</span>
+                 <p className="text-slate-700 leading-relaxed text-[15px] whitespace-pre-line relative z-10 font-medium italic">
+                   "{coverLetter}"
                  </p>
               </div>
             </section>
           )}
 
           {/* ── Thông tin cá nhân ── */}
-          <section>
-            <SectionDivider label="THÔNG TIN CÁ NHÂN" />
-            {summary && <p className="text-slate-600 leading-relaxed text-[15px] mb-8">{summary}</p>}
+          <section className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm">
+            <SectionDivider label="THÔNG TIN CÁ NHÂN" icon="person" />
+            {summary && <p className="text-slate-600 leading-relaxed text-[15px] mb-6 pl-1 border-l-2 border-blue-500/50">{summary}</p>}
 
             {/* Contact Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {phone && <ContactRow icon="call" label="ĐIỆN THOẠI" value={phone} />}
               {email && <ContactRow icon="alternate_email" label="EMAIL CÁ NHÂN" value={email} />}
               {city && <ContactRow icon="map" label="THÀNH PHỐ" value={city} />}
@@ -257,143 +268,112 @@ export default function CandidateDetail() {
           </section>
 
           {/* ── Kinh nghiệm làm việc ── */}
-          <section>
-            <SectionDivider label="KINH NGHIỆM LÀM VIỆC" />
-            <div className="space-y-4">
-              {experiences.length > 0 ? (
-                experiences.map((exp, idx) => (
-                  <div key={exp.id ?? idx} className="flex gap-4 p-5 rounded-2xl border border-slate-100 bg-white shadow-sm">
-                    <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center flex-shrink-0">
-                      <span className="material-symbols-outlined text-[22px]">business_center</span>
+          <section className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm">
+            <SectionDivider label="KINH NGHIỆM LÀM VIỆC" icon="business_center" />
+            
+            {experiences.length > 0 ? (
+              <div className="relative pl-6 border-l-2 border-slate-100 space-y-8 ml-3">
+                {experiences.map((exp, idx) => (
+                  <div key={exp.id ?? idx} className="relative group">
+                    {/* Timeline node */}
+                    <div className="absolute -left-[31px] top-1.5 w-4 h-4 rounded-full bg-white border-2 border-blue-500 ring-4 ring-blue-50 group-hover:scale-110 transition-transform duration-200 flex items-center justify-center">
+                      <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
                     </div>
-                    <div className="min-w-0">
-                      <h4 className="font-bold text-slate-900 text-sm truncate">{exp.jobTitle ?? exp.title}</h4>
-                      <p className="text-slate-600 text-sm font-medium mt-0.5">{exp.companyName ?? exp.company}</p>
-                      <p className="text-slate-400 text-xs mt-1 font-medium">
-                        {fmtDate(exp.startDate)} {exp.endDate ? `– ${fmtDate(exp.endDate)}` : "– Hiện tại"}
-                      </p>
+                    {/* Timeline content */}
+                    <div>
+                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
+                        <div>
+                          <h4 className="font-bold text-slate-900 text-[16px] group-hover:text-blue-600 transition-colors">
+                            {exp.jobTitle ?? exp.title}
+                          </h4>
+                          <p className="text-blue-600 text-sm font-semibold mt-1 flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[16px] text-blue-500">business</span>
+                            {exp.companyName ?? exp.company}
+                          </p>
+                        </div>
+                        <span className="px-2.5 py-1 bg-slate-50 text-slate-500 rounded-lg text-xs font-bold whitespace-nowrap shadow-sm border border-slate-100 self-start sm:self-auto">
+                          {fmtDate(exp.startDate)} {exp.endDate ? `– ${fmtDate(exp.endDate)}` : "– Hiện tại"}
+                        </span>
+                      </div>
                       {exp.description && (
-                        <p className="text-slate-500 text-sm mt-3 leading-relaxed whitespace-pre-line">{exp.description}</p>
+                        <p className="text-slate-500 text-sm mt-3 leading-relaxed whitespace-pre-line border-t border-slate-50 pt-3">
+                          {exp.description}
+                        </p>
                       )}
                     </div>
                   </div>
-                ))
-              ) : (
-                <p className="text-slate-400 text-sm italic">Chưa cập nhật kinh nghiệm làm việc</p>
-              )}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-slate-400 text-sm italic pl-1">Chưa cập nhật kinh nghiệm làm việc</p>
+            )}
           </section>
 
           {/* ── Học vấn ── */}
-          <section>
-            <SectionDivider label="HỌC VẤN" />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {educations.length > 0 ? (
-                educations.map((edu, idx) => (
-                  <div key={edu.id ?? idx} className="flex items-start gap-4 p-5 rounded-2xl border border-slate-100 bg-white shadow-sm">
-                    <div className="w-12 h-12 rounded-xl bg-orange-50 text-orange-500 flex items-center justify-center flex-shrink-0">
-                      <span className="material-symbols-outlined text-[22px]">school</span>
+          <section className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm">
+            <SectionDivider label="HỌC VẤN" icon="school" />
+            
+            {educations.length > 0 ? (
+              <div className="relative pl-6 border-l-2 border-slate-100 space-y-8 ml-3">
+                {educations.map((edu, idx) => (
+                  <div key={edu.id ?? idx} className="relative group">
+                    {/* Timeline node */}
+                    <div className="absolute -left-[31px] top-1.5 w-4 h-4 rounded-full bg-white border-2 border-orange-500 ring-4 ring-orange-50 group-hover:scale-110 transition-transform duration-200 flex items-center justify-center">
+                      <div className="w-1.5 h-1.5 rounded-full bg-orange-500" />
                     </div>
+                    {/* Timeline content */}
                     <div>
-                      <h4 className="font-bold text-slate-900 text-sm">{edu.schoolName ?? edu.school}</h4>
-                      <p className="text-slate-500 text-sm mt-0.5">{edu.major ?? edu.fieldOfStudy ?? edu.degree}</p>
-                      <p className="text-slate-400 text-xs mt-1.5 font-medium">
-                        {fmtDate(edu.startDate)} {edu.endDate ? `– ${fmtDate(edu.endDate)}` : "– Hiện tại"}
-                      </p>
+                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
+                        <div>
+                          <h4 className="font-bold text-slate-900 text-[16px] group-hover:text-orange-600 transition-colors">
+                            {edu.schoolName ?? edu.school}
+                          </h4>
+                          <p className="text-orange-600 text-sm font-semibold mt-1 flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[16px] text-orange-500">school</span>
+                            {edu.major ?? edu.fieldOfStudy ?? edu.degree}
+                          </p>
+                        </div>
+                        <span className="px-2.5 py-1 bg-slate-50 text-slate-500 rounded-lg text-xs font-bold whitespace-nowrap shadow-sm border border-slate-100 self-start sm:self-auto">
+                          {fmtDate(edu.startDate)} {edu.endDate ? `– ${fmtDate(edu.endDate)}` : "– Hiện tại"}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                ))
-              ) : (
-                <p className="text-slate-400 text-sm italic col-span-2">Chưa cập nhật thông tin học vấn</p>
-              )}
-            </div>
-          </section>
-
-
-
-          {/* Action buttons at the bottom */}
-          <div className="pt-6 mt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
-            {/* Nếu trạng thái kết thúc (accepted/rejected), show thông báo nhẹ */}
-            {(currentStatus === 'accepted' || currentStatus === 'rejected') ? (
-              <div className={`flex items-center gap-2 px-4 py-3 rounded-xl border w-full ${statusInfo.color}`}>
-                <span className="material-symbols-outlined">{statusInfo.icon}</span>
-                <p className="text-sm font-semibold">Hồ sơ này đã ở trạng thái: {statusInfo.label}</p>
+                ))}
               </div>
             ) : (
-              <>
-                <div className="flex gap-2">
-                  {/* Chỉ hiện 'Đang xem xét' nếu đang ở 'submitted' */}
-                  {currentStatus === 'submitted' && (
-                    <button
-                      onClick={() => handleUpdateStatus("under_review")}
-                      className="flex items-center gap-1.5 px-4 py-2 border border-blue-200 bg-blue-50 text-blue-700 rounded-xl text-sm font-semibold hover:bg-blue-100 transition-colors"
-                      title="Chuyển sang trạng thái đang xem xét"
-                    >
-                      <span className="material-symbols-outlined text-[18px]">visibility</span> Đang xem xét
-                    </button>
-                  )}
-                  
-                  {/* Phỏng vấn: Hiện nếu là submitted hoặc under_review */}
-                  {(currentStatus === 'submitted' || currentStatus === 'under_review') && (
-                    <button
-                      onClick={() => handleUpdateStatus("interview")}
-                      className="flex items-center gap-1.5 px-4 py-2 border border-purple-200 bg-purple-50 text-purple-700 rounded-xl text-sm font-semibold hover:bg-purple-100 transition-colors"
-                      title="Lên lịch phỏng vấn"
-                    >
-                      <span className="material-symbols-outlined text-[18px]">calendar_month</span> Phỏng vấn
-                    </button>
-                  )}
-
-                  {/* Tuyển dụng: Hiện nếu là submitted, under_review hoặc interview */}
-                  {(currentStatus === 'submitted' || currentStatus === 'under_review' || currentStatus === 'interview') && (
-                    <button
-                      onClick={() => handleUpdateStatus("accepted")}
-                      className="flex items-center gap-1.5 px-6 py-2 bg-green-600 text-white rounded-xl text-sm font-semibold hover:bg-green-700 shadow-sm transition-colors"
-                    >
-                      Đã tuyển <span className="material-symbols-outlined text-[18px]">check_circle</span>
-                    </button>
-                  )}
-                </div>
-                
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleUpdateStatus("rejected")}
-                    className="flex items-center gap-1.5 px-6 py-2 border border-red-200 bg-red-50 text-red-600 rounded-xl text-sm font-semibold hover:bg-red-100 transition-colors"
-                  >
-                    <span className="material-symbols-outlined text-[18px]">close</span> Từ chối
-                  </button>
-                </div>
-              </>
+              <p className="text-slate-400 text-sm italic pl-1">Chưa cập nhật thông tin học vấn</p>
             )}
-          </div>
+          </section>
 
-          <div className="h-8" />
+          {/* Spacer to make sure sticky action bar does not cover content */}
+          <div className="h-20" />
         </div>
 
         {/* ══════════════════════ RIGHT SIDEBAR ══════════════════════ */}
-        <div className="w-full xl:w-[340px] flex-shrink-0 space-y-5">
+        <div className="w-full lg:w-[360px] flex-shrink-0 space-y-6 lg:sticky lg:top-6">
 
-          {/* CV Preview */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-700">
+          {/* CV Preview Card */}
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 space-y-5">
+            <div className="flex items-center justify-between">
+              <h3 className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-widest text-[#1e3fae]">
                 <span className="material-symbols-outlined text-blue-500 text-[20px]">contact_page</span>
-                CV Preview
+                Xem trước CV
               </h3>
               <div className="flex items-center gap-2 text-slate-400">
                 <button
                   onClick={() => handleOpenCv('download')}
                   disabled={cvLoading}
-                  className="hover:text-slate-700 transition-colors disabled:opacity-40"
-                  title="Download"
+                  className="hover:text-blue-600 transition-colors disabled:opacity-40 p-1.5 hover:bg-slate-50 rounded-lg"
+                  title="Tải về"
                 >
                   <span className="material-symbols-outlined text-[20px]">download</span>
                 </button>
                 <button
                   onClick={() => handleOpenCv('view')}
                   disabled={cvLoading}
-                  className="hover:text-slate-700 transition-colors disabled:opacity-40"
-                  title="Open in new tab"
+                  className="hover:text-blue-600 transition-colors disabled:opacity-40 p-1.5 hover:bg-slate-50 rounded-lg"
+                  title="Mở tab mới"
                 >
                   <span className="material-symbols-outlined text-[20px]">open_in_new</span>
                 </button>
@@ -401,37 +381,37 @@ export default function CandidateDetail() {
             </div>
 
             {/* Simulated CV thumbnail */}
-            <div className="relative aspect-[0.71] bg-slate-50 border border-slate-100 rounded-xl overflow-hidden group cursor-pointer shadow-sm mb-4">
+            <div className="relative aspect-[0.71] bg-slate-50 border border-slate-100 rounded-2xl overflow-hidden group cursor-pointer shadow-inner">
               <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
-                <div className="w-16 h-16 rounded-2xl bg-red-50 text-red-500 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <div className="w-16 h-16 rounded-2xl bg-red-50 text-red-500 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-sm">
                   <span className="material-symbols-outlined text-4xl">pdf_viewer</span>
                 </div>
                 <p className="text-xs font-bold text-slate-700 uppercase tracking-wider line-clamp-2 px-2">
                   {app?.resumeUrl?.split('/').pop() || "Resume.pdf"}
                 </p>
-                <p className="text-[10px] text-slate-400 mt-1">PDF Document · 1.2 MB</p>
+                <p className="text-[10px] text-slate-400 mt-1.5 font-medium">Tài liệu PDF · 1.2 MB</p>
               </div>
 
               {/* Hover overlay */}
               <div
-                className="absolute inset-0 bg-black/20 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center justify-center"
+                className="absolute inset-0 bg-black/25 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center justify-center"
                 onClick={() => handleOpenCv('view')}
               >
-                <div className="bg-white rounded-xl px-4 py-2 text-sm font-semibold text-slate-800 flex items-center gap-2 shadow-lg">
+                <div className="bg-white rounded-xl px-4 py-2.5 text-xs font-bold text-slate-800 flex items-center gap-2 shadow-lg">
                   {cvLoading
-                    ? <><span className="material-symbols-outlined text-[18px] animate-spin">progress_activity</span> Đang tải...</>
-                    : <><span className="material-symbols-outlined text-[18px]">visibility</span> Xem bản lớn</>
+                    ? <><span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span> Đang tải...</>
+                    : <><span className="material-symbols-outlined text-[16px]">visibility</span> Xem bản lớn</>
                   }
                 </div>
               </div>
             </div>
 
             {/* CV action buttons */}
-            <div className="flex gap-2 mb-4">
+            <div className="flex gap-2">
               <button
                 onClick={() => handleOpenCv('view')}
                 disabled={cvLoading}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 border border-slate-200 hover:border-blue-200 hover:bg-blue-50 rounded-xl text-xs font-bold text-slate-700 hover:text-blue-600 transition-all disabled:opacity-50"
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 border border-slate-200 hover:border-blue-200 hover:bg-blue-50 rounded-xl text-xs font-bold text-slate-700 hover:text-blue-600 transition-all disabled:opacity-50 shadow-sm"
               >
                 <span className="material-symbols-outlined text-[16px]">visibility</span>
                 {cvLoading ? 'Đang tải...' : 'Xem CV'}
@@ -439,7 +419,7 @@ export default function CandidateDetail() {
               <button
                 onClick={() => handleOpenCv('download')}
                 disabled={cvLoading}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 border border-slate-200 hover:border-green-200 hover:bg-green-50 rounded-xl text-xs font-bold text-slate-700 hover:text-green-600 transition-all disabled:opacity-50"
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 border border-slate-200 hover:border-green-200 hover:bg-green-50 rounded-xl text-xs font-bold text-slate-700 hover:text-green-600 transition-all disabled:opacity-50 shadow-sm"
               >
                 <span className="material-symbols-outlined text-[16px]">download</span>
                 Tải về
@@ -448,15 +428,15 @@ export default function CandidateDetail() {
           </div>
 
           {/* Kỹ năng chuyên môn (Moved to Sidebar) */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-            <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-700 mb-4">
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
+            <h3 className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-widest text-[#1e3fae] mb-4">
               <span className="material-symbols-outlined text-blue-500 text-[20px]">psychology</span>
               KỸ NĂNG CHUYÊN MÔN
             </h3>
             <div className="flex flex-wrap gap-2">
               {skills.length > 0 ? (
                 skills.map((skill: string, idx: number) => (
-                  <span key={idx} className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 text-[13px] font-bold border border-blue-100 shadow-sm">
+                  <span key={idx} className="px-3 py-1.5 rounded-xl bg-blue-50/70 text-blue-700 text-[13px] font-semibold border border-blue-100/50 shadow-sm hover:scale-105 transition-transform duration-200">
                     {skill}
                   </span>
                 ))
@@ -467,18 +447,85 @@ export default function CandidateDetail() {
           </div>
         </div>
       </div>
+
+      {/* ── Sticky Action Footer Bar ── */}
+      <div className="fixed bottom-6 left-4 right-4 z-50 bg-white/90 backdrop-blur-md border border-slate-200/60 rounded-2xl p-4 shadow-xl flex flex-wrap items-center justify-between gap-3 max-w-5xl mx-auto animate-fade-in-up">
+        {/* Left message/status info */}
+        <div className="flex items-center gap-2.5">
+          <div className="w-1.5 h-6 bg-blue-500 rounded-full" />
+          <span className="text-sm font-bold text-slate-800">Trạng thái hồ sơ:</span>
+          <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${statusInfo.color}`}>
+            {statusInfo.label}
+          </span>
+        </div>
+
+        {/* Action button groups */}
+        <div className="flex items-center gap-3">
+          {(currentStatus === 'accepted' || currentStatus === 'rejected') ? (
+            <div className="text-xs font-semibold text-slate-400 italic">
+              Nhà tuyển dụng đã hoàn thành xử lý hồ sơ này.
+            </div>
+          ) : (
+            <>
+              {/* Phản hồi duyệt */}
+              <div className="flex gap-2">
+                {currentStatus === 'submitted' && (
+                  <button
+                    onClick={() => handleUpdateStatus("under_review")}
+                    className="flex items-center gap-1.5 px-4.5 py-2.5 border border-blue-200 bg-blue-50 text-blue-700 rounded-xl text-xs font-extrabold hover:bg-blue-100 transition-colors shadow-sm"
+                    title="Chuyển sang trạng thái đang xem xét"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">visibility</span> Đang xem xét
+                  </button>
+                )}
+                
+                {(currentStatus === 'submitted' || currentStatus === 'under_review') && (
+                  <button
+                    onClick={() => handleUpdateStatus("interview")}
+                    className="flex items-center gap-1.5 px-4.5 py-2.5 border border-purple-200 bg-purple-50 text-purple-700 rounded-xl text-xs font-extrabold hover:bg-purple-100 transition-colors shadow-sm"
+                    title="Lên lịch phỏng vấn"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">calendar_month</span> Phỏng vấn
+                  </button>
+                )}
+
+                {(currentStatus === 'submitted' || currentStatus === 'under_review' || currentStatus === 'interview') && (
+                  <button
+                    onClick={() => handleUpdateStatus("accepted")}
+                    className="flex items-center gap-1.5 px-6 py-2.5 bg-green-600 text-white rounded-xl text-xs font-extrabold hover:bg-green-700 shadow-md shadow-green-100 transition-all hover:translate-y-[-1px] active:translate-y-[0]"
+                  >
+                    Nhận việc <span className="material-symbols-outlined text-[16px]">check_circle</span>
+                  </button>
+                )}
+              </div>
+              
+              <div className="h-6 w-px bg-slate-200" />
+              
+              <button
+                onClick={() => handleUpdateStatus("rejected")}
+                className="flex items-center gap-1.5 px-5 py-2.5 border border-red-200 bg-red-50 text-red-600 rounded-xl text-xs font-extrabold hover:bg-red-100 transition-colors shadow-sm"
+              >
+                <span className="material-symbols-outlined text-[16px]">close</span> Từ chối
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
     </div>
   );
 }
 
 // ── Helper Components ──────────────────────────────────────────────────────
 
-function SectionDivider({ label }: { label: string }) {
+function SectionDivider({ label, icon }: { label: string; icon?: string }) {
   return (
-    <div className="flex items-center gap-3 mb-6">
-      <div className="h-px flex-1 bg-slate-200"></div>
-      <span className="text-[11px] font-bold tracking-widest text-slate-400 uppercase whitespace-nowrap">{label}</span>
-      <div className="h-px flex-1 bg-slate-200"></div>
+    <div className="flex items-center gap-2.5 mb-6">
+      {icon && (
+        <span className="material-symbols-outlined text-blue-500/80 text-[20px]">{icon}</span>
+      )}
+      <span className="text-[11px] font-extrabold tracking-widest text-[#1e3fae] uppercase whitespace-nowrap">{label}</span>
+      <div className="h-px flex-1 bg-gradient-to-r from-slate-200 to-transparent"></div>
     </div>
   );
 }
@@ -491,13 +538,13 @@ function ContactRow({
   value: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center gap-3 p-4 rounded-xl border border-slate-200 bg-white shadow-sm hover:border-blue-300 transition-colors">
-      <div className="w-9 h-9 rounded-full bg-blue-50 border border-blue-100 shadow-sm flex items-center justify-center text-blue-600 flex-shrink-0">
-        <span className="material-symbols-outlined text-[18px]">{icon}</span>
+    <div className="flex items-center gap-4.5 p-4.5 rounded-2xl border border-slate-100 bg-white shadow-sm hover:shadow-md hover:border-blue-400/30 transition-all duration-300">
+      <div className="w-10 h-10 rounded-xl bg-blue-50/80 border border-blue-100/50 shadow-sm flex items-center justify-center text-blue-600 flex-shrink-0">
+        <span className="material-symbols-outlined text-[20px]">{icon}</span>
       </div>
       <div>
-        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">{label}</p>
-        <div className="text-[15px] font-bold text-slate-900">{value}</div>
+        <p className="text-[9px] font-extrabold uppercase tracking-widest text-slate-400 mb-0.5">{label}</p>
+        <div className="text-[14px] font-bold text-slate-800">{value}</div>
       </div>
     </div>
   );

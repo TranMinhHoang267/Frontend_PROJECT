@@ -2,7 +2,7 @@ import { Building2, MapPin, Banknote, FileText, CheckCircle2, ChevronRight, Info
 import { useState, useEffect } from "react";
 import { applicationService } from "../../services/application.service";
 import { jobService } from "../../services/job.service";
-import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { resumeService } from "../../services/resume.service";
 import type { CvFile } from "../../services/resume.service";
 import {employerService} from "../../services/employer.service";
@@ -39,6 +39,7 @@ export default function ApplyJob() {
   const navigate = useNavigate();
   const { jobId } = useParams();
   const [job, setJob] = useState<JobDetails | null>(location.state?.job || null);
+  const fromPath: string = location.state?.from ?? '/candidate/recommended'; // trang gốc
   const [cvs, setCvs] = useState<CvFile[]>([]);
   const [selectedCvId, setSelectedCvId] = useState<string>("");
   const [coverLetter, setCoverLetter] = useState<string>("");
@@ -71,6 +72,14 @@ export default function ApplyJob() {
              });
           }
         }
+
+        // 3. Fetch previous application cover letter if any (if they withdrew previously)
+        if (jobId) {
+          const prevApp = await applicationService.getPreviousApplication(jobId);
+          if (prevApp && prevApp.coverLetter) {
+            setCoverLetter(prevApp.coverLetter);
+          }
+        }
       } catch (error) {
         console.error("Lỗi tải dữ liệu nộp đơn:", error);
       } finally {
@@ -95,7 +104,7 @@ export default function ApplyJob() {
       };
       await applicationService.apply(payload);
       alert("Nộp đơn thành công!");
-      navigate('/candidate'); // Redirect to dashboard or application history
+      navigate(fromPath); // Quay lại trang gốc (search / recommended / saved)
     } catch (err: unknown) {
       interface ErrorResponse { response?: { data?: { message?: string } } }
       const apiErr = err as ErrorResponse;
@@ -113,9 +122,17 @@ export default function ApplyJob() {
     <div className="bg-[#f8fafc] min-h-screen font-sans pb-20">
       <div className="max-w-[800px] mx-auto px-4 pt-8">
         
-        {/* Breadcrumb */}
+        {/* Breadcrumb — quay về trang gốc */}
         <div className="flex items-center text-sm text-slate-500 mb-6">
-          <Link to="/candidate/recommended" className="hover:text-blue-600">Việc làm</Link>
+          <button
+            onClick={() => navigate(fromPath)}
+            className="hover:text-blue-600 transition-colors flex items-center gap-1"
+          >
+            <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+            {fromPath.includes('search') ? 'Tìm kiếm việc làm'
+              : fromPath.includes('saved') ? 'Việc làm đã lưu'
+              : 'Gợi ý việc làm'}
+          </button>
           <ChevronRight className="w-4 h-4 mx-1" />
           <span className="text-slate-900 font-medium">Nộp đơn</span>
         </div>
@@ -152,7 +169,7 @@ export default function ApplyJob() {
           </div>
           <button
             className="px-5 py-2.5 bg-blue-50 text-[#1e3fae] font-bold rounded-lg text-sm border border-blue-100 hover:bg-blue-100 transition-colors"
-            onClick={() => navigate(`/candidate/jobs/${jobId}`)}
+            onClick={() => navigate(`/candidate/jobs/${jobId}`, { state: { from: location.pathname } })}
           >
             Xem chi tiết công việc
           </button>

@@ -85,5 +85,11 @@ export const employerApplicationService = {
   updateStatus: async (id: number | string, payload: { status: string; note?: string }) => {
     const res = await apiClient.patch(`/employer/applicants/${id}/status`, payload);
     return res.data?.data ?? res.data;
+  },
+
+  // POST /api/smart/scoring-cv
+  scoreCVs: async (jobId: string, reqOpt?: string) => {
+    const res = await apiClient.post('/smart/scoring-cv', { jobId, reqOpt });
+    return res.data;
   }
 };

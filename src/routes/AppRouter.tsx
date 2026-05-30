@@ -18,6 +18,8 @@ import ApplyJob from "../pages/candidate/ApplyJob";
 import JobDetail from "../pages/candidate/JobDetail";
 import MyApplications from "../pages/candidate/MyApplications";
 import SavedJobs from "../pages/candidate/SavedJobs";
+import SearchJobs from "../pages/candidate/SearchJobs";
+
 // import ApplicationDetailModal from "../pages/candidate/ApplicationDetailModal";
 // Recruiter Pages
 import RecruiterDashboard from "../pages/recruiter/Dashboard";
@@ -54,6 +56,8 @@ export default function AppRouter() {
           <Route path="profile" element={<CandidateProfile />} />
           <Route path="recommended" element={<RecommendedJobs />} />
           <Route path="saved" element={<SavedJobs />} />
+          <Route path="search" element={<SearchJobs />} />
+
           <Route path="jobs/:jobId" element={<JobDetail />} />
           <Route path="apply/:jobId" element={<ApplyJob />} />
           <Route path="applications" element={<MyApplications />} />

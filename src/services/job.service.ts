@@ -90,4 +90,48 @@ export const jobService = {
     const res = await apiClient.get('/public/jobs', { params });
     return res.data?.data ?? res.data ?? [];
   },
+
+  // GET /api/public/companies (lấy danh sách công ty công khai)
+  getPublicCompanies: async (params?: { limit?: number; search?: string }) => {
+    const res = await apiClient.get('/public/companies', { params });
+    return res.data?.data ?? res.data ?? [];
+  },
+
+
+  // GET /api/search-jobs — tìm kiếm việc làm theo keyword/location/jobType/jobLevel/salary
+  searchJobs: async (params: {
+    keyword?: string;
+    location?: string;
+    jobType?: string;
+    jobLevel?: string;
+    salary?: number;
+    page?: number;
+    limit?: number;
+  }) => {
+    const res = await apiClient.get('/search-jobs', { params });
+    const d = res.data?.data ?? res.data ?? {};
+    return {
+      jobs:         (d.jobs        ?? []) as SearchJobResult[],
+      total_items:  (d.total_items ?? 0)  as number,
+      total_pages:  (d.total_pages ?? 1)  as number,
+      current_page: (d.current_page ?? 1) as number,
+    };
+  },
 };
+
+// ─── Search result type ────────────────────────────────────────────────────────
+export interface SearchJobResult {
+  id: string | number;
+  title: string;
+  location?: string;
+  jobType?: string;
+  jobLevel?: string;
+  salaryMin?: number;
+  salaryMax?: number;
+  deadline?: string;
+  description?: string;
+  requirements?: string;
+  skills?: { id: number | string; name: string }[];
+  company?: { id?: number | string; name?: string; logoUrl?: string; city?: string };
+}
+

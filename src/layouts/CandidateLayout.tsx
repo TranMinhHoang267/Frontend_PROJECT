@@ -4,6 +4,7 @@ import { Bell, LogOut, User, ChevronDown, Camera, Loader2, PanelLeftClose, Panel
 import { useAuthStore } from "../stores/authStore";
 import { avatarService } from "../services/avatar.service";
 import { authService } from "../services/auth.service";
+import Chatbox from "../components/Chatbox";
 
 export default function CandidateLayout() {
   const navigate = useNavigate();
@@ -79,7 +80,7 @@ export default function CandidateLayout() {
     { to: '/candidate/recommended', label: 'Gợi ý cho bạn', icon: 'magic_button', end: false },
     { to: '/candidate/applications', label: 'Đơn ứng tuyển', icon: 'work', end: false },
     { to: '/candidate/saved', label: 'Việc làm đã lưu', icon: 'bookmark', end: false },
-    { to: '/candidate/find', label: 'Tìm kiếm', icon: 'search', end: false },
+    { to: '/candidate/search', label: 'Tìm kiếm', icon: 'search', end: false },
   ];
 
   return (
@@ -253,6 +254,9 @@ export default function CandidateLayout() {
           <Outlet />
         </div>
       </main>
+      
+      {/* Floating AI Chatbox */}
+      <Chatbox />
     </div>
   );
 }
