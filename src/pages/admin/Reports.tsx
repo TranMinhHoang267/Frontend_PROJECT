@@ -189,64 +189,200 @@ function LineAreaChart({ data }: { data: GrowthDataPoint[] }) {
   );
 }
 
-// ─── SVG Bar Chart ────────────────────────────────────────────────────────────
+// ─── SVG Bar Chart — Premium Edition ─────────────────────────────────────────
 function BarChart({ data }: { data: MonthlyApplications[] }) {
-  // Hooks must be at the top — before any conditional return
   const [tooltip, setTooltip] = useState<{ idx: number } | null>(null);
   const formatMonth = (m: string) => { const [, mo] = m.split("-"); return `T${parseInt(mo)}`; };
 
-  if (data.length === 0) return <div className="h-44 flex items-center justify-center text-slate-400 text-sm">Chưa có dữ liệu</div>;
+  if (data.length === 0) return (
+    <div className="h-48 flex flex-col items-center justify-center text-slate-400 text-sm gap-2">
+      <svg className="w-10 h-10 text-slate-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.5V21h4.5v-7.5H3zM9.75 9V21h4.5V9h-4.5zM16.5 3.75V21H21V3.75h-4.5z" />
+      </svg>
+      Chưa có dữ liệu ứng tuyển
+    </div>
+  );
 
-  const W = 520, H = 140, PAD = { top: 10, right: 12, bottom: 30, left: 36 };
+  const W = 540, H = 160, PAD = { top: 16, right: 16, bottom: 34, left: 40 };
   const chartW = W - PAD.left - PAD.right;
   const chartH = H - PAD.top - PAD.bottom;
-  const barW = Math.max(8, (chartW / data.length) - 6);
-  // backend: getApplicationsByMonth returns `total` field (not `count`)
   const maxVal = Math.max(...data.map(d => d.total), 1);
+  const barGroupW = chartW / data.length;
+  const barW = Math.min(Math.max(10, barGroupW * 0.55), 42);
+
+  // y-axis ticks
+  const yTicks = [0, 0.25, 0.5, 0.75, 1];
 
   return (
     <div className="overflow-x-auto">
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ minWidth: "320px" }}>
-        {/* Grid lines */}
-        {[0, 0.5, 1].map((t, i) => (
-          <g key={i}>
-            <line x1={PAD.left} y1={PAD.top + chartH * (1 - t)} x2={PAD.left + chartW} y2={PAD.top + chartH * (1 - t)}
-              stroke="#e2e8f0" strokeWidth="1" strokeDasharray="4 4" />
-            {t > 0 && (
-              <text x={PAD.left - 4} y={PAD.top + chartH * (1 - t) + 4} textAnchor="end" fontSize="8" fill="#94a3b8" fontWeight="600">
-                {Math.round(maxVal * t)}
-              </text>
-            )}
-          </g>
-        ))}
+        <defs>
+          {/* Gradient total bar */}
+          <linearGradient id="barGradTotal" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#6366f1" />
+            <stop offset="100%" stopColor="#1e3fae" />
+          </linearGradient>
+          {/* Gradient accepted */}
+          <linearGradient id="barGradAccepted" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#34d399" />
+            <stop offset="100%" stopColor="#059669" />
+          </linearGradient>
+          {/* Gradient pending */}
+          <linearGradient id="barGradPending" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#fbbf24" />
+            <stop offset="100%" stopColor="#d97706" />
+          </linearGradient>
+          {/* Glow filter */}
+          <filter id="barGlow">
+            <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#6366f1" floodOpacity="0.35" />
+          </filter>
+        </defs>
 
-        {data.map((d, idx) => {
-          const x = PAD.left + (idx / data.length) * chartW + (chartW / data.length - barW) / 2;
-          const bH = (d.total / maxVal) * chartH;
-          const y = PAD.top + chartH - bH;
-          const isHovered = tooltip?.idx === idx;
+        {/* Background horizontal grid */}
+        {yTicks.map((t, i) => {
+          const y = PAD.top + chartH * (1 - t);
           return (
-            <g key={idx} onMouseEnter={() => setTooltip({ idx })} onMouseLeave={() => setTooltip(null)} style={{ cursor: "pointer" }}>
-              <rect x={x} y={y} width={barW} height={bH} rx="4"
-                fill={isHovered ? "#1e3fae" : "#1e3fae99"} style={{ transition: "fill 0.15s" }} />
-              {isHovered && (
-                <>
-                  <rect x={x + barW / 2 - 26} y={y - 24} width="52" height="18" rx="4" fill="#1e293b" />
-                  <text x={x + barW / 2} y={y - 11} textAnchor="middle" fontSize="9" fill="white" fontWeight="700">
-                    {d.total.toLocaleString("vi-VN")} đơn
-                  </text>
-                </>
+            <g key={i}>
+              <line
+                x1={PAD.left} y1={y} x2={PAD.left + chartW} y2={y}
+                stroke={t === 0 ? "#cbd5e1" : "#e2e8f0"} strokeWidth={t === 0 ? 1.5 : 1}
+                strokeDasharray={t === 0 ? "none" : "4 4"}
+              />
+              {t > 0 && (
+                <text x={PAD.left - 6} y={y + 4} textAnchor="end" fontSize="8.5" fill="#94a3b8" fontWeight="600">
+                  {Math.round(maxVal * t)}
+                </text>
               )}
-              <text x={x + barW / 2} y={PAD.top + chartH + 16} textAnchor="middle" fontSize="8.5" fill="#94a3b8" fontWeight="600">
+            </g>
+          );
+        })}
+
+        {/* Bars */}
+        {data.map((d, idx) => {
+          const cx = PAD.left + (idx + 0.5) * barGroupW;
+          const x = cx - barW / 2;
+          const isHovered = tooltip?.idx === idx;
+
+          const totalH  = Math.max((d.total    / maxVal) * chartH, d.total    > 0 ? 4 : 0);
+          const accH    = Math.max((d.accepted  / maxVal) * chartH, d.accepted  > 0 ? 3 : 0);
+          const pendH   = Math.max(((d.total - d.accepted - d.rejected) / maxVal) * chartH, 0);
+
+          const yTotal  = PAD.top + chartH - totalH;
+          const yBottom = PAD.top + chartH;
+
+          return (
+            <g
+              key={idx}
+              onMouseEnter={() => setTooltip({ idx })}
+              onMouseLeave={() => setTooltip(null)}
+              style={{ cursor: "pointer" }}
+            >
+              {/* Total bar (background — full height) */}
+              <rect
+                x={x} y={yTotal} width={barW} height={totalH}
+                rx="5" ry="5"
+                fill={isHovered ? "url(#barGradTotal)" : "#c7d2fe"}
+                filter={isHovered ? "url(#barGlow)" : undefined}
+                style={{ transition: "fill 0.2s, filter 0.2s" }}
+              />
+
+              {/* Accepted segment (bottom portion, green) */}
+              {accH > 0 && (
+                <rect
+                  x={x} y={yBottom - accH} width={barW} height={accH}
+                  rx="4" ry="4"
+                  fill="url(#barGradAccepted)"
+                  opacity={isHovered ? 1 : 0.85}
+                  style={{ transition: "opacity 0.2s" }}
+                />
+              )}
+
+              {/* Pending segment (above accepted, amber) */}
+              {pendH > 0 && accH > 0 && (
+                <rect
+                  x={x} y={yBottom - accH - pendH} width={barW} height={pendH}
+                  fill="url(#barGradPending)"
+                  opacity={isHovered ? 0.9 : 0.65}
+                  style={{ transition: "opacity 0.2s" }}
+                />
+              )}
+
+              {/* Value label on top of bar */}
+              {totalH > 14 && (
+                <text
+                  x={cx} y={yTotal - 5}
+                  textAnchor="middle" fontSize="8" fill={isHovered ? "#1e3fae" : "#94a3b8"}
+                  fontWeight="800"
+                  style={{ transition: "fill 0.2s" }}
+                >
+                  {d.total}
+                </text>
+              )}
+
+              {/* Month label */}
+              <text
+                x={cx} y={PAD.top + chartH + 18}
+                textAnchor="middle" fontSize="9" fill={isHovered ? "#1e3fae" : "#94a3b8"}
+                fontWeight={isHovered ? "800" : "600"}
+                style={{ transition: "fill 0.2s" }}
+              >
                 {formatMonth(d.month)}
               </text>
+
+              {/* Rich Tooltip */}
+              {isHovered && (
+                <g>
+                  {/* Tooltip box */}
+                  <rect
+                    x={cx - 46} y={yTotal - 68} width="92" height="60"
+                    rx="8" fill="#1e293b"
+                    style={{ filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.3))" }}
+                  />
+                  {/* Arrow */}
+                  <polygon
+                    points={`${cx - 6},${yTotal - 8} ${cx + 6},${yTotal - 8} ${cx},${yTotal - 2}`}
+                    fill="#1e293b"
+                  />
+                  {/* Total */}
+                  <text x={cx} y={yTotal - 50} textAnchor="middle" fontSize="10" fill="#94a3b8" fontWeight="600">
+                    Tổng: {d.total.toLocaleString("vi-VN")}
+                  </text>
+                  {/* Accepted */}
+                  <circle cx={cx - 28} cy={yTotal - 36} r="3" fill="#34d399" />
+                  <text x={cx - 22} y={yTotal - 33} fontSize="8.5" fill="#d1fae5" fontWeight="700">
+                    {d.accepted} chấp nhận
+                  </text>
+                  {/* Rejected */}
+                  <circle cx={cx - 28} cy={yTotal - 22} r="3" fill="#f87171" />
+                  <text x={cx - 22} y={yTotal - 19} fontSize="8.5" fill="#fecaca" fontWeight="700">
+                    {d.rejected} từ chối
+                  </text>
+                </g>
+              )}
             </g>
           );
         })}
       </svg>
+
+      {/* Legend */}
+      <div className="flex items-center gap-5 mt-3 px-2">
+        <span className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500">
+          <span className="w-3 h-3 rounded-sm bg-indigo-200 inline-block border border-indigo-300" />Tổng đơn
+        </span>
+        <span className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500">
+          <span className="w-3 h-3 rounded-sm bg-emerald-500 inline-block" />Chấp nhận
+        </span>
+        <span className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500">
+          <span className="w-3 h-3 rounded-sm bg-amber-400 inline-block" />Đang chờ
+        </span>
+        <span className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500">
+          <span className="w-3 h-3 rounded-sm bg-rose-400 inline-block" />Từ chối
+        </span>
+      </div>
     </div>
   );
 }
+
 
 // ─── Stat Card ────────────────────────────────────────────────────────────────
 function StatCard({ label, value, icon: Icon, trend, color, bg }: {

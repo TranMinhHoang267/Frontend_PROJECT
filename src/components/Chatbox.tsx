@@ -245,6 +245,17 @@ export default function Chatbox() {
   const [isLoading, setIsLoading] = useState(false);
   const [isFrozen, setIsFrozen] = useState(false);
 
+  // Khi isFrozen=true: phiên chat > 24h → cho phép bắt đầu cuộc trò chuyện mới
+  const handleStartNewChat = () => {
+    setIsFrozen(false);
+    setMessages([{
+      sender: "ai",
+      templateIndex: 2,
+      text: "Xin chào trở lại! 👋 Tôi là Trợ lý ảo AI của RecruitHub. Phiên chat mới đã bắt đầu — tôi có thể giúp gì cho bạn hôm nay?",
+      createdAt: new Date(),
+    }]);
+  };
+
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   // Quick suggestions
@@ -418,8 +429,17 @@ export default function Chatbox() {
               <div>
                 <h3 className="font-bold text-sm leading-tight">Trợ lý ảo AI</h3>
                 <div className="flex items-center gap-1.5 mt-0.5">
-                  <span className="w-2 h-2 bg-emerald-400 rounded-full animate-ping"></span>
-                  <span className="text-[11px] text-blue-100 font-medium">Đang hoạt động</span>
+                  {isFrozen ? (
+                    <>
+                      <span className="w-2 h-2 bg-amber-400 rounded-full" />
+                      <span className="text-[11px] text-amber-200 font-medium">Phiên đã hết hạn</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="w-2 h-2 bg-emerald-400 rounded-full animate-ping" />
+                      <span className="text-[11px] text-blue-100 font-medium">Đang hoạt động</span>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -517,8 +537,8 @@ export default function Chatbox() {
             <div ref={chatEndRef} />
           </div>
 
-          {/* Quick suggestions */}
-          {messages.length <= 2 && !isLoading && (
+          {/* Quick suggestions — chỉ hiện khi session còn active */}
+          {messages.length <= 2 && !isLoading && !isFrozen && (
             <div className="px-4 py-2 bg-slate-50 border-t border-slate-100">
               <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
                 Gợi ý câu hỏi
@@ -537,7 +557,31 @@ export default function Chatbox() {
             </div>
           )}
 
-          {/* Input Area */}
+          {/* ── Frozen State: Phiên hết hạn → Bắt đầu mới ── */}
+          {isFrozen ? (
+            <div className="p-4 bg-white border-t border-slate-200">
+              <div className="flex flex-col items-center gap-3 py-2">
+                {/* Icon */}
+                <div className="w-12 h-12 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center">
+                  <span className="text-2xl">⏰</span>
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-bold text-slate-700">Phiên chat đã hết hạn</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5 leading-relaxed">
+                    Lịch sử trò chuyện của bạn đã quá 24h.{"\n"}Bắt đầu phiên mới để tiếp tục.
+                  </p>
+                </div>
+                <button
+                  onClick={handleStartNewChat}
+                  className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-[#1e3fae] to-blue-500 hover:from-[#1e3fae]/90 hover:to-blue-500/90 text-white font-bold text-sm py-3 rounded-xl shadow-md hover:shadow-lg transition-all active:scale-[0.98]"
+                >
+                  <Sparkles className="w-4 h-4 text-amber-300" />
+                  Bắt đầu cuộc trò chuyện mới
+                </button>
+              </div>
+            </div>
+          ) : (
+          /* ── Normal Input Area ── */
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -549,13 +593,13 @@ export default function Chatbox() {
               type="text"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
-              placeholder={isFrozen ? "Đã khóa chat (Quá 24h)..." : "Nhập câu hỏi tại đây..."}
-              disabled={isLoading || isFrozen}
+              placeholder="Nhập câu hỏi tại đây..."
+              disabled={isLoading}
               className="flex-1 bg-slate-100 hover:bg-slate-100/80 focus:bg-white text-slate-800 placeholder-slate-400 text-sm px-4 py-2.5 rounded-xl border border-transparent focus:border-[#1e3fae] outline-none transition"
             />
             <button
               type="submit"
-              disabled={!inputValue.trim() || isLoading || isFrozen}
+              disabled={!inputValue.trim() || isLoading}
               className="p-2.5 bg-[#1e3fae] hover:bg-[#1e3fae]/90 text-white rounded-xl disabled:bg-slate-100 disabled:text-slate-400 transition cursor-pointer flex-shrink-0"
               title="Gửi tin nhắn"
             >
@@ -566,6 +610,7 @@ export default function Chatbox() {
               )}
             </button>
           </form>
+          )}
         </div>
       )}
 
