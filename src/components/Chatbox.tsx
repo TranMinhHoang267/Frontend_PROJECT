@@ -11,28 +11,232 @@ import {
   Bot,
   User,
   ChevronRight,
-  TrendingUp
+  TrendingUp,
+  HelpCircle,
+  Building2,
+  Briefcase
 } from "lucide-react";
 import { chatService } from "../services/chat.service";
 import { useAuthStore } from "../stores/authStore";
 
+// ──────────────────────────────────────────────────────────
+// Types – khớp với từng template trong chat_response_templates.md
+// ──────────────────────────────────────────────────────────
+
+/** Item dùng cho Template 0 (job list) và Template 3 (CV vs Job scoring) */
+interface ListItem {
+  id?: string;
+  /** Template 0 – mô tả ngắn cho từng job */
+  message?: string;
+  /** Template 0 */
+  title?: string;
+  company?: string;
+  description?: string;
+  salary?: string;
+  location?: string;
+  /** Template 3 – CV vs Job */
+  score?: number;
+  reasoning?: string;
+  suggestions?: string;
+}
+
+type TemplateIndex = 0 | 2 | 3 | 4 | 6;
+
 interface MessageUI {
   sender: "user" | "ai";
+  /** templateIndex từ field `message` của response (0 / 2 / 3 / 4 / 6), undefined = user message */
+  templateIndex?: TemplateIndex;
+  /** Văn bản hiển thị trong bubble chính */
   text: string;
-  list?: Array<{
-    id?: string;
-    title?: string;
-    company?: string;
-    description?: string;
-    salary?: string;
-    location?: string;
-    score?: number;
-    reasoning?: string;
-    suggestions?: string;
-  }>;
+  /** Template 0 / 3 / 4 */
+  list?: ListItem[];
+  /** Template 6 – câu hỏi làm rõ */
+  refinedQuestion?: string;
   createdAt?: Date;
 }
 
+// ──────────────────────────────────────────────────────────
+// Helper – parse raw answer object → MessageUI fields
+// ──────────────────────────────────────────────────────────
+function parseAIResponse(
+  templateIndex: number | string,
+  data: Record<string, unknown>
+): Pick<MessageUI, "templateIndex" | "text" | "list" | "refinedQuestion"> {
+  const idx = Number(templateIndex) as TemplateIndex;
+
+  switch (idx) {
+    case 0:
+    case 3:
+      return {
+        templateIndex: idx,
+        text: (data.message as string) || "Đây là kết quả tôi tìm thấy:",
+        list: Array.isArray(data.list) ? (data.list as ListItem[]) : undefined,
+      };
+    case 2:
+      return {
+        templateIndex: 2,
+        text: (data.message as string) || "Xin chào! Tôi có thể giúp gì cho bạn?",
+      };
+    case 4:
+      return {
+        templateIndex: 4,
+        text: (data.message as string) || "Đây là thông tin bạn cần:",
+        list: Array.isArray(data.list) ? (data.list as ListItem[]) : undefined,
+      };
+    case 6:
+      return {
+        templateIndex: 6,
+        text: "Bạn có thể cung cấp thêm thông tin để tôi hỗ trợ chính xác hơn không?",
+        refinedQuestion: (data.refined_question as string) || "",
+      };
+    default:
+      return {
+        text: (data.message as string) || "Đã có phản hồi từ AI.",
+        list: Array.isArray(data.list) ? (data.list as ListItem[]) : undefined,
+      };
+  }
+}
+
+// ──────────────────────────────────────────────────────────
+// Sub-components
+// ──────────────────────────────────────────────────────────
+
+/** Template 0 – một job card trong list tìm kiếm / so sánh */
+function JobCard({ job, onClose }: { job: ListItem; onClose: () => void }) {
+  return (
+    <div className="bg-white border border-slate-200/80 rounded-xl p-3 shadow-sm hover:border-[#1e3fae]/40 hover:shadow-md transition-all flex flex-col gap-2">
+      {/* Tiêu đề & công ty */}
+      <div>
+        <h4 className="font-bold text-slate-900 text-sm hover:text-[#1e3fae] transition-colors line-clamp-1">
+          {job.title}
+        </h4>
+        {job.company && (
+          <p className="flex items-center gap-1 text-xs text-slate-500 font-semibold mt-0.5">
+            <Building2 className="w-3 h-3 text-slate-400 shrink-0" />
+            {job.company}
+          </p>
+        )}
+      </div>
+
+      {/* Địa điểm & lương */}
+      {(job.location || job.salary) && (
+        <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-slate-600">
+          {job.location && (
+            <span className="flex items-center gap-1">
+              <MapPin className="w-3 h-3 text-slate-400" />
+              {job.location}
+            </span>
+          )}
+          {job.salary && (
+            <span className="flex items-center gap-1 font-medium text-blue-600">
+              <DollarSign className="w-3 h-3 text-blue-400" />
+              {job.salary}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Mô tả ngắn từ AI (field message trong item) */}
+      {job.message && (
+        <p className="text-xs text-slate-600 italic leading-relaxed line-clamp-2">
+          {job.message}
+        </p>
+      )}
+
+      {job.id && (
+        <Link
+          to={`/candidate/jobs/${job.id}`}
+          onClick={onClose}
+          className="mt-1 flex items-center justify-center gap-1 py-1.5 px-3 bg-[#1e3fae]/5 hover:bg-[#1e3fae]/10 text-[#1e3fae] rounded-lg text-xs font-bold transition"
+        >
+          Xem chi tiết công việc
+          <ChevronRight className="w-3.5 h-3.5" />
+        </Link>
+      )}
+    </div>
+  );
+}
+
+/** Template 3 – card đánh giá CV vs Job */
+function ScoreCard({ job, onClose }: { job: ListItem; onClose: () => void }) {
+  return (
+    <div className="bg-white border border-slate-200/80 rounded-xl p-3 shadow-sm hover:border-emerald-300 transition-all flex flex-col gap-2">
+      {/* Score badge */}
+      {job.score !== undefined && (
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+            Độ phù hợp
+          </span>
+          <span
+            className={`flex items-center gap-1 text-xs font-extrabold px-2 py-0.5 rounded-full ${
+              job.score >= 7
+                ? "text-emerald-600 bg-emerald-50"
+                : job.score >= 4
+                ? "text-amber-600 bg-amber-50"
+                : "text-rose-600 bg-rose-50"
+            }`}
+          >
+            <TrendingUp className="w-3.5 h-3.5" />
+            {job.score}/10
+          </span>
+        </div>
+      )}
+
+      <div>
+        <h4 className="font-bold text-slate-900 text-sm line-clamp-1">{job.title}</h4>
+      </div>
+
+      {job.reasoning && (
+        <p className="text-xs text-slate-600 bg-slate-50 p-2 rounded-lg border border-slate-100 italic">
+          <strong>Lý do:</strong> {job.reasoning}
+        </p>
+      )}
+
+      {job.suggestions && (
+        <p className="text-xs text-amber-700 bg-amber-50 p-2 rounded-lg border border-amber-100">
+          <strong>Gợi ý cải thiện:</strong> {job.suggestions}
+        </p>
+      )}
+
+      {job.id && (
+        <Link
+          to={`/candidate/jobs/${job.id}`}
+          onClick={onClose}
+          className="mt-1 flex items-center justify-center gap-1 py-1.5 px-3 bg-[#1e3fae]/5 hover:bg-[#1e3fae]/10 text-[#1e3fae] rounded-lg text-xs font-bold transition"
+        >
+          Xem vị trí này
+          <ChevronRight className="w-3.5 h-3.5" />
+        </Link>
+      )}
+    </div>
+  );
+}
+
+/** Template 4 – card thông tin company / job (chỉ có id + message) */
+function ResearchCard({ item }: { item: ListItem }) {
+  return (
+    <div className="bg-white border border-slate-200/80 rounded-xl p-3 shadow-sm flex flex-col gap-1.5">
+      <div className="flex items-start gap-2">
+        <Briefcase className="w-3.5 h-3.5 text-[#1e3fae] shrink-0 mt-0.5" />
+        <p className="text-xs text-slate-700 leading-relaxed">{item.message}</p>
+      </div>
+    </div>
+  );
+}
+
+/** Template 6 – hiển thị câu hỏi làm rõ */
+function ClarificationCard({ question }: { question: string }) {
+  return (
+    <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl p-3 mt-1">
+      <HelpCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+      <p className="text-xs text-amber-800 leading-relaxed">{question}</p>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────
+// Main Chatbox component
+// ──────────────────────────────────────────────────────────
 export default function Chatbox() {
   const { isAuthenticated, user } = useAuthStore();
   const [isOpen, setIsOpen] = useState(false);
@@ -40,18 +244,18 @@ export default function Chatbox() {
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isFrozen, setIsFrozen] = useState(false);
-  
+
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // Quick suggestions for the user
+  // Quick suggestions
   const suggestions = [
     { label: "🔍 Tìm việc NodeJS", query: "Tìm kiếm công việc NodeJS" },
     { label: "📄 Gợi ý việc từ CV", query: "Gợi ý việc làm phù hợp với CV của tôi" },
     { label: "⚖️ Đánh giá CV vs Job", query: "So sánh CV của tôi với một công việc bất kỳ" },
-    { label: "🏢 Hỏi về công ty", query: "Hãy giới thiệu một số công ty nổi bật" }
+    { label: "🏢 Hỏi về công ty", query: "Hãy giới thiệu một số công ty nổi bật" },
   ];
 
-  // Load chat history on mount
+  // ── Load history ──────────────────────────────────────────
   useEffect(() => {
     if (!isAuthenticated) {
       setMessages([]);
@@ -65,53 +269,51 @@ export default function Chatbox() {
         if (response.type === "SUCCESS" && response.data) {
           setIsFrozen(response.data.isFrozen);
           const historyList: MessageUI[] = [];
-          
-          // The history is ordered desc (newest first). Let's reverse it to show chronologically
+
+          // History is desc (newest first) – reverse to show chronologically
           const sortedHistory = [...response.data.history].reverse();
-          
-          sortedHistory.forEach((item) => {
-            // Add user question
+
+          sortedHistory.forEach((item: {
+            question: string;
+            answer?: string;
+            template?: number | string;
+            createdAt?: string;
+          }) => {
+            // User message
             historyList.push({
               sender: "user",
               text: item.question,
-              createdAt: item.createdAt ? new Date(item.createdAt) : new Date()
+              createdAt: item.createdAt ? new Date(item.createdAt) : new Date(),
             });
 
-            // Parse and add AI response
-            let aiText = "";
-            let listData: MessageUI["list"] = undefined;
-            
+            // AI response
+            let aiMsg: Pick<MessageUI, "templateIndex" | "text" | "list" | "refinedQuestion"> = {
+              text: "Đã có phản hồi từ AI.",
+            };
+
             try {
               if (item.answer) {
-                const parsed = JSON.parse(item.answer);
-                aiText = parsed.message || item.template || "Đây là kết quả tôi tìm thấy:";
-                if (parsed.list) {
-                  listData = parsed.list;
-                } else if (parsed.jobs) {
-                  listData = parsed.jobs;
-                } else if (Array.isArray(parsed)) {
-                  listData = parsed;
-                }
+                const parsed: Record<string, unknown> = JSON.parse(item.answer);
+                aiMsg = parseAIResponse(item.template ?? -1, parsed);
               } else {
-                aiText = item.template || "Đã có phản hồi từ AI";
+                aiMsg = { text: String(item.template ?? "Đã có phản hồi từ AI.") };
               }
             } catch {
-              aiText = item.answer || item.template || "";
+              aiMsg = { text: item.answer || String(item.template ?? "") };
             }
 
             historyList.push({
               sender: "ai",
-              text: aiText,
-              list: listData,
-              createdAt: item.createdAt ? new Date(item.createdAt) : new Date()
+              ...aiMsg,
+              createdAt: item.createdAt ? new Date(item.createdAt) : new Date(),
             });
           });
 
           if (historyList.length === 0) {
-            // Default greeting message if history is empty
             historyList.push({
               sender: "ai",
-              text: "Xin chào! Tôi là Trợ lý ảo JobConnect. Tôi có thể giúp gì cho bạn hôm nay? Bạn có thể hỏi tôi về tìm kiếm việc làm, gợi ý công việc phù hợp với CV, hoặc so sánh đánh giá hồ sơ của bạn với các tin tuyển dụng.",
+              templateIndex: 2,
+              text: "Xin chào! Tôi là Trợ lý ảo JobConnect. Tôi có thể giúp gì cho bạn hôm nay?",
             });
           }
 
@@ -119,12 +321,12 @@ export default function Chatbox() {
         }
       } catch (err) {
         console.error("Lỗi khi tải lịch sử chat:", err);
-        // Fallback welcome message
         setMessages([
           {
             sender: "ai",
-            text: "Xin chào! Tôi là Trợ lý ảo JobConnect. Tôi có thể giúp gì cho bạn hôm nay? Bạn có thể hỏi tôi về tìm kiếm việc làm, gợi ý công việc phù hợp với CV, hoặc so sánh đánh giá hồ sơ của bạn với các tin tuyển dụng.",
-          }
+            templateIndex: 2,
+            text: "Xin chào! Tôi là Trợ lý ảo JobConnect. Tôi có thể giúp gì cho bạn hôm nay?",
+          },
         ]);
       }
     };
@@ -132,11 +334,12 @@ export default function Chatbox() {
     fetchHistory();
   }, [isAuthenticated, user?.id]);
 
-  // Auto-scroll to bottom of chat
+  // ── Auto-scroll ───────────────────────────────────────────
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isOpen]);
 
+  // ── Send message ──────────────────────────────────────────
   const handleSend = async (textToSend: string) => {
     if (!textToSend.trim() || isLoading) return;
 
@@ -147,27 +350,22 @@ export default function Chatbox() {
 
     try {
       const response = await chatService.sendMessage(userText);
-      
-      let aiText = "";
-      let listData: MessageUI["list"] = undefined;
+
+      let aiMsg: Pick<MessageUI, "templateIndex" | "text" | "list" | "refinedQuestion">;
 
       if (response.type === "SUCCESS" && response.data) {
-        aiText = response.data.message || "";
-        if (response.data.list) {
-          listData = response.data.list;
-        }
+        // response.message contains the templateIndex (0/2/3/4/6)
+        aiMsg = parseAIResponse(response.message, response.data as Record<string, unknown>);
       } else {
-        aiText = String(response.message) || "Xin lỗi, đã xảy ra lỗi trong quá trình xử lý.";
+        // FAILED response
+        aiMsg = {
+          text: String(response.message) || "Xin lỗi, đã xảy ra lỗi trong quá trình xử lý.",
+        };
       }
 
       setMessages((prev) => [
         ...prev,
-        {
-          sender: "ai",
-          text: aiText,
-          list: listData,
-          createdAt: new Date()
-        }
+        { sender: "ai", ...aiMsg, createdAt: new Date() },
       ]);
     } catch (err: unknown) {
       console.error("Lỗi gửi tin nhắn chat:", err);
@@ -178,17 +376,34 @@ export default function Chatbox() {
       }
       setMessages((prev) => [
         ...prev,
-        {
-          sender: "ai",
-          text: errMsg,
-          createdAt: new Date()
-        }
+        { sender: "ai", text: errMsg, createdAt: new Date() },
       ]);
     } finally {
       setIsLoading(false);
     }
   };
 
+  // ── Render list theo templateIndex ────────────────────────
+  const renderList = (msg: MessageUI) => {
+    if (!msg.list || msg.list.length === 0) return null;
+
+    return (
+      <div className="mt-2.5 space-y-2.5 w-full">
+        {msg.list.map((item, idx) => {
+          if (msg.templateIndex === 3) {
+            return <ScoreCard key={idx} job={item} onClose={() => setIsOpen(false)} />;
+          }
+          if (msg.templateIndex === 4) {
+            return <ResearchCard key={idx} item={item} />;
+          }
+          // Template 0 (default)
+          return <JobCard key={idx} job={item} onClose={() => setIsOpen(false)} />;
+        })}
+      </div>
+    );
+  };
+
+  // ── JSX ───────────────────────────────────────────────────
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
       {/* Floating Chat Window */}
@@ -231,8 +446,9 @@ export default function Chatbox() {
                   </div>
                 )}
 
-                {/* Bubble content */}
+                {/* Bubble + list content */}
                 <div className="max-w-[80%] flex flex-col">
+                  {/* Main text bubble */}
                   <div
                     className={`px-4 py-2.5 rounded-2xl text-[14px] leading-relaxed shadow-sm ${
                       msg.sender === "user"
@@ -243,80 +459,25 @@ export default function Chatbox() {
                     <p className="whitespace-pre-wrap">{msg.text}</p>
                   </div>
 
-                  {/* Recommendations (list of jobs) */}
-                  {msg.list && msg.list.length > 0 && (
-                    <div className="mt-3 space-y-2.5 w-full">
-                      {msg.list.map((job, idx) => (
-                        <div
-                          key={idx}
-                          className="bg-white border border-slate-200/80 rounded-xl p-3 shadow-sm hover:border-[#1e3fae]/50 transition-colors flex flex-col gap-2"
-                        >
-                          {job.score !== undefined && (
-                            <div className="flex items-center justify-between">
-                              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Đánh giá độ khớp</span>
-                              <span className="flex items-center gap-1 text-xs font-extrabold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
-                                <TrendingUp className="w-3.5 h-3.5" />
-                                {job.score}/10
-                              </span>
-                            </div>
-                          )}
-
-                          <div>
-                            <h4 className="font-bold text-slate-900 text-sm hover:text-[#1e3fae] transition-colors line-clamp-1">
-                              {job.title}
-                            </h4>
-                            {job.company && (
-                              <p className="text-xs text-slate-500 font-semibold mt-0.5">{job.company}</p>
-                            )}
-                          </div>
-
-                          {(job.location || job.salary) && (
-                            <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1 text-[11px] text-slate-600">
-                              {job.location && (
-                                <span className="flex items-center gap-1">
-                                  <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                                  {job.location}
-                                </span>
-                              )}
-                              {job.salary && (
-                                <span className="flex items-center gap-1 font-medium text-blue-600">
-                                  <DollarSign className="w-3.5 h-3.5 text-blue-400" />
-                                  {job.salary}
-                                </span>
-                              )}
-                            </div>
-                          )}
-
-                          {job.reasoning && (
-                            <p className="text-xs text-slate-600 mt-1 bg-slate-50 p-2 rounded-lg border border-slate-100 italic">
-                              <strong>Lý do:</strong> {job.reasoning}
-                            </p>
-                          )}
-                          
-                          {job.suggestions && (
-                            <p className="text-xs text-amber-700 bg-amber-50 p-2 rounded-lg border border-amber-100">
-                              <strong>Khuyên dùng:</strong> {job.suggestions}
-                            </p>
-                          )}
-
-                          {job.id && (
-                            <Link
-                              to={`/candidate/jobs/${job.id}`}
-                              onClick={() => setIsOpen(false)}
-                              className="mt-1 flex items-center justify-center gap-1 py-1.5 px-3 bg-[#1e3fae]/5 hover:bg-[#1e3fae]/10 text-[#1e3fae] rounded-lg text-xs font-bold transition"
-                            >
-                              Xem chi tiết công việc
-                              <ChevronRight className="w-3.5 h-3.5" />
-                            </Link>
-                          )}
-                        </div>
-                      ))}
-                    </div>
+                  {/* Template 6 – clarification card */}
+                  {msg.templateIndex === 6 && msg.refinedQuestion && (
+                    <ClarificationCard question={msg.refinedQuestion} />
                   )}
 
+                  {/* Template 0 / 3 / 4 – list cards */}
+                  {renderList(msg)}
+
+                  {/* Timestamp */}
                   {msg.createdAt && (
-                    <span className={`text-[10px] text-slate-400 mt-1 ${msg.sender === "user" ? "text-right" : "text-left"}`}>
-                      {msg.createdAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    <span
+                      className={`text-[10px] text-slate-400 mt-1 ${
+                        msg.sender === "user" ? "text-right" : "text-left"
+                      }`}
+                    >
+                      {msg.createdAt.toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
                     </span>
                   )}
                 </div>
@@ -330,16 +491,25 @@ export default function Chatbox() {
               </div>
             ))}
 
-            {/* AI Typing loading indicator */}
+            {/* AI Typing indicator */}
             {isLoading && (
               <div className="flex gap-3 justify-start">
                 <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#1e3fae] to-blue-500 flex items-center justify-center text-white flex-shrink-0 shadow-sm">
                   <Bot className="w-4 h-4" />
                 </div>
                 <div className="bg-white border border-slate-100 px-4 py-3 rounded-2xl rounded-bl-none shadow-sm flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 bg-[#1e3fae] rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-                  <span className="w-1.5 h-1.5 bg-[#1e3fae] rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-                  <span className="w-1.5 h-1.5 bg-[#1e3fae] rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                  <span
+                    className="w-1.5 h-1.5 bg-[#1e3fae] rounded-full animate-bounce"
+                    style={{ animationDelay: "0ms" }}
+                  ></span>
+                  <span
+                    className="w-1.5 h-1.5 bg-[#1e3fae] rounded-full animate-bounce"
+                    style={{ animationDelay: "150ms" }}
+                  ></span>
+                  <span
+                    className="w-1.5 h-1.5 bg-[#1e3fae] rounded-full animate-bounce"
+                    style={{ animationDelay: "300ms" }}
+                  ></span>
                 </div>
               </div>
             )}
@@ -347,10 +517,12 @@ export default function Chatbox() {
             <div ref={chatEndRef} />
           </div>
 
-          {/* Quick recommendations */}
+          {/* Quick suggestions */}
           {messages.length <= 2 && !isLoading && (
             <div className="px-4 py-2 bg-slate-50 border-t border-slate-100">
-              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Gợi ý câu hỏi</p>
+              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                Gợi ý câu hỏi
+              </p>
               <div className="flex flex-wrap gap-1.5">
                 {suggestions.map((suggestion, index) => (
                   <button
@@ -387,7 +559,11 @@ export default function Chatbox() {
               className="p-2.5 bg-[#1e3fae] hover:bg-[#1e3fae]/90 text-white rounded-xl disabled:bg-slate-100 disabled:text-slate-400 transition cursor-pointer flex-shrink-0"
               title="Gửi tin nhắn"
             >
-              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              {isLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
             </button>
           </form>
         </div>

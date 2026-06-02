@@ -2,6 +2,7 @@ import { Heart, MapPin, Loader2, ArrowRight, Sparkles } from "lucide-react";
 import { useState, useEffect } from "react";
 import { candidateService } from "../../services/candidate.service";
 import { useNavigate } from "react-router-dom";
+import { employerService } from "../../services/employer.service";
 
 interface SavedJobItem {
   bookmarkId: string;
@@ -46,7 +47,7 @@ function SavedJobCard({
   onRemove: (jobId: string, title: string) => void;
 }) {
   const { job, savedAt } = item;
-  const logoUrl     = job.company?.logoUrl ?? "";
+  const logoUrl     = employerService.getLogoUrl(job.company?.logoUrl);
   const companyName = job.company?.name || "Công ty bảo mật";
   const location    = job.location || job.company?.city || "";
   const salary      = formatSalary(job.salaryMin, job.salaryMax);

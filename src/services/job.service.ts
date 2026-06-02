@@ -104,7 +104,11 @@ export const jobService = {
     location?: string;
     jobType?: string;
     jobLevel?: string;
-    salary?: number;
+    /** Dải lương – gửi salaryMin / salaryMax / negotiable thay cho salary đơn */
+    salaryMin?: string | number;
+    salaryMax?: string | number;
+    /** "true" nếu chỉ tìm job Thỏa thuận */
+    negotiable?: string;
     page?: number;
     limit?: number;
   }) => {

@@ -3,6 +3,7 @@ import { Heart, MapPin, Loader2, Sparkles, Building2 } from "lucide-react";
 import { jobService } from "../../services/job.service";
 import { candidateService } from "../../services/candidate.service";
 import { useNavigate } from "react-router-dom";
+import { employerService } from "../../services/employer.service";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface SkillItem { id: number | string; name: string }
@@ -11,7 +12,7 @@ interface JobItem {
   id: string | number;
   title: string;
   skills?: SkillItem[] | string;
-  company?: { name?: string; logoUrl?: string; logo_url?: string; city?: string };
+  company?: { name?: string; logoUrl?: string; city?: string };
   location?: string;
   salaryMin?: number;  salary_min?: number;
   salaryMax?: number;  salary_max?: number;
@@ -73,7 +74,7 @@ function JobCard({
   const matchedSet   = new Set(job.matchedSkills ?? []);
   const company      = job.company;
   const companyName  = company?.name || "Công ty bảo mật";
-  const logoUrl      = company?.logoUrl ?? company?.logo_url ?? "";
+  const logoUrl      = employerService.getLogoUrl(company?.logoUrl);
   const location     = job.location || company?.city || "";
   const salary       = formatSalary(job);
 

@@ -4,18 +4,27 @@ import { jobService } from "../../services/job.service";
 import type { SearchJobResult } from "../../services/job.service";
 import { candidateService } from "../../services/candidate.service";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { employerService } from "../../services/employer.service";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const JOB_TYPES  = ["Full-time", "Part-time", "Remote", "Freelance", "Intern"];
 const JOB_LEVELS = ["Intern", "Fresher", "Junior", "Middle", "Senior", "Manager", "Director"];
-const SALARY_OPTIONS = [
-  { label: "Tất cả mức lương", value: "" },
-  { label: "Dưới 5 triệu",     value: "5000000" },
-  { label: "5 - 10 triệu",     value: "10000000" },
-  { label: "10 - 20 triệu",    value: "20000000" },
-  { label: "20 - 30 triệu",    value: "30000000" },
-  { label: "Trên 30 triệu",    value: "99000000" },
+const SALARY_OPTIONS: {
+  label: string;
+  value: string;
+  salaryMin?: string;
+  salaryMax?: string;
+  negotiable?: string;
+}[] = [
+  { label: "Tất cả mức lương",  value: "" },
+  { label: "Thỏa thuận",        value: "negotiable",  negotiable: "true" },
+  { label: "Dưới 5 triệu",      value: "lt5",         salaryMax: "5000000" },
+  { label: "5 - 10 triệu",      value: "5-10",        salaryMin: "5000000",  salaryMax: "10000000" },
+  { label: "10 - 20 triệu",     value: "10-20",       salaryMin: "10000000", salaryMax: "20000000" },
+  { label: "20 - 30 triệu",     value: "20-30",       salaryMin: "20000000", salaryMax: "30000000" },
+  { label: "Trên 30 triệu",     value: "gt30",        salaryMin: "30000000" },
 ];
+
 
 const JOB_COLORS = ["#1e3fae", "#0891b2", "#059669", "#7c3aed", "#d97706", "#dc2626"];
 const jobColor = (id: string | number) => JOB_COLORS[String(id).length % JOB_COLORS.length];
@@ -51,7 +60,7 @@ function JobCard({
   onApply: (job: SearchJobResult) => void;
   onBookmark: (id: string | number) => void;
 }) {
-  const logoUrl     = job.company?.logoUrl ?? "";
+  const logoUrl     = employerService.getLogoUrl(job.company?.logoUrl);
   const companyName = job.company?.name || "Công ty bảo mật";
   const location    = job.location || job.company?.city || "";
   const salary      = fmtSalary(job.salaryMin, job.salaryMax);
@@ -191,7 +200,14 @@ export default function SearchJobs() {
       if (location.trim()) params.location = location.trim();
       if (jobType)  params.jobType  = jobType;
       if (jobLevel) params.jobLevel = jobLevel;
-      if (salary)   params.salary   = parseInt(salary);
+
+      // Ánh xạ salary option -> salaryMin / salaryMax / negotiable
+      if (salary) {
+        const opt = SALARY_OPTIONS.find(o => o.value === salary);
+        if (opt?.negotiable)  params.negotiable = opt.negotiable;
+        if (opt?.salaryMin)   params.salaryMin  = opt.salaryMin;
+        if (opt?.salaryMax)   params.salaryMax  = opt.salaryMax;
+      }
 
       // Sync URL
       const urlP: Record<string, string> = {};
@@ -250,7 +266,14 @@ export default function SearchJobs() {
     if (location.trim()) params.location = location.trim();
     if (jt)  params.jobType  = jt;
     if (jl)  params.jobLevel = jl;
-    if (sal) params.salary   = parseInt(sal);
+
+    // Ánh xạ salary option -> salaryMin / salaryMax / negotiable
+    if (sal) {
+      const opt = SALARY_OPTIONS.find(o => o.value === sal);
+      if (opt?.negotiable)  params.negotiable = opt.negotiable;
+      if (opt?.salaryMin)   params.salaryMin  = opt.salaryMin;
+      if (opt?.salaryMax)   params.salaryMax  = opt.salaryMax;
+    }
 
     jobService.searchJobs(params as Parameters<typeof jobService.searchJobs>[0])
       .then(res => {
