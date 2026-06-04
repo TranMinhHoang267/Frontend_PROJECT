@@ -5,7 +5,7 @@ import {
   Phone, Shield, ChevronLeft, ChevronRight, Filter
 } from "lucide-react";
 import { adminUserService, type UserItem } from "../../services/adminUser.service";
-
+import { avatarService } from "../../services/avatar.service";
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const ROLE_MAP: Record<string, { label: string; cls: string; dot: string }> = {
   candidate: { label: "Ứng viên",    cls: "bg-sky-500/10 text-sky-600 border-sky-500/20",    dot: "bg-sky-500" },
@@ -406,7 +406,7 @@ export default function AdminUserManagement() {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className={`hidden sm:flex w-9 h-9 rounded-xl bg-gradient-to-br ${avatarColors[colorIdx]} items-center justify-center text-white font-extrabold text-sm shrink-0 shadow-sm overflow-hidden`}>
-                            {user.avatarUrl ? <img src={user.avatarUrl} alt={user.fullName} className="w-full h-full object-cover" /> : initials(user.fullName)}
+                            {user.avatarUrl ? <img src={avatarService.toAbsUrl(user.avatarUrl)} alt={user.fullName} className="w-full h-full object-cover" /> : initials(user.fullName)}
                           </div>
                           <div>
                             <p className="font-bold text-slate-900 group-hover:text-[#1e3fae] transition-colors leading-tight">{user.fullName}</p>

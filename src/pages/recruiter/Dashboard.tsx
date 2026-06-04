@@ -7,7 +7,7 @@ import {
 import { employerService } from "../../services/employer.service";
 import type { DashboardStats } from "../../services/employer.service";
 import { Link } from "react-router-dom";
-
+import { avatarService } from "../../services/avatar.service";
 // ─── Components ─────────────────────────────────────────────────────────────
 
 const StatCard = ({ title, value, trend, icon: Icon, colorClass, bgClass }: { title: string; value: string | number; trend?: number; icon: React.ElementType; colorClass: string; bgClass: string }) => (
@@ -209,8 +209,8 @@ export default function RecruiterDashboard() {
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div className="size-10 rounded-full bg-blue-50 text-[#1e3fae] border border-blue-100 flex items-center justify-center font-black text-xs">
-                        {app.candidate.avatarUrl ? (
-                          <img src={app.candidate.avatarUrl} alt="" className="w-full h-full rounded-full object-cover" />
+                        {app.candidate?.avatarUrl ? (
+                          <img src={avatarService.toAbsUrl(app.candidate.avatarUrl)} alt="" className="w-full h-full rounded-full object-cover" />
                         ) : (
                           app.candidate.fullName.charAt(0)
                         )}

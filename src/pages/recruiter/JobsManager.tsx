@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Loader2, Users, Eye, PauseCircle, PlayCircle, ChevronRight, Search, Trash2 } from "lucide-react";
 import { jobService } from "../../services/job.service";
 import { employerApplicationService } from "../../services/employerApplication.service";
+import { avatarService } from "../../services/avatar.service";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 interface Applicant {
@@ -12,6 +13,7 @@ interface Applicant {
   email: string;
   applied_at: string;
   status: string;
+  avatarUrl?: string;
 }
 
 interface JobWithApplicants {
@@ -153,8 +155,12 @@ const ApplicantDrawer = ({
                 className="group flex flex-col gap-2.5 p-4 rounded-xl bg-slate-50 hover:bg-white hover:shadow-md hover:border-blue-200 transition-all cursor-pointer border border-slate-100 relative"
               >
                 <div className="flex items-center gap-3 w-full">
-                  <div className="size-10 rounded-full bg-[#1e3fae]/10 text-[#1e3fae] flex items-center justify-center font-bold text-sm flex-shrink-0">
-                    {ap.full_name?.charAt(0)?.toUpperCase() ?? String(i + 1)}
+                  <div className="size-10 rounded-full bg-[#1e3fae]/10 text-[#1e3fae] flex items-center justify-center font-bold text-sm flex-shrink-0 overflow-hidden border border-slate-100">
+                    {ap.avatarUrl ? (
+                      <img src={ap.avatarUrl} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      ap.full_name?.charAt(0)?.toUpperCase() ?? String(i + 1)
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
@@ -281,27 +287,24 @@ export default function JobsManager() {
         : [];
 
       interface RawApplicant {
-        application_id?: string;
-        applicationId?: string;
         id?: string;
-        resume_id?: string;
         resumeId?: string;
-        candidate?: { full_name?: string; fullName?: string; email?: string };
-        full_name?: string;
-        fullName?: string;
-        email?: string;
-        applied_at?: string;
+        candidate?: {
+          fullName?: string;
+          email?: string;
+          avatarUrl?: string;
+        };
         appliedAt?: string;
-        createdAt?: string;
         status: string;
       }
       const mapped: Applicant[] = (rawArr as RawApplicant[]).map(item => ({
-        id:         item.applicationId || item.application_id || item.id || "",
-        resumeId:   item.resumeId || item.resume_id || "",
-        full_name:  item.candidate?.fullName ?? item.candidate?.full_name ?? item.fullName ?? item.full_name ?? "Ứng viên",
-        email:      item.candidate?.email ?? item.email ?? "",
-        applied_at: item.appliedAt || item.applied_at || item.createdAt || "",
+        id:         item.id || "",
+        resumeId:   item.resumeId || "",
+        full_name:  item.candidate?.fullName ?? "Ứng viên",
+        email:      item.candidate?.email ?? "",
+        applied_at: item.appliedAt || "",
         status:     item.status,
+        avatarUrl:  item.candidate?.avatarUrl ? avatarService.toAbsUrl(item.candidate.avatarUrl) : "",
       }));
       setApplicants(mapped);
     } catch {
