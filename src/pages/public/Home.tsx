@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   Search, 
@@ -29,6 +29,365 @@ interface CompanyInfo {
 interface SkillInfo {
   id: string | number;
   name: string;
+}
+
+// ── Hook: trigger khi element cuộn vào viewport ────────────────────────────
+function useInView(threshold = 0.15) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setVisible(true); obs.disconnect(); } },
+      { threshold }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [threshold]);
+  return { ref, visible };
+}
+
+// ── Animated Counter ───────────────────────────────────────────────────────
+function AnimatedCounter({ target, suffix = "" }: { target: number; suffix?: string }) {
+  const [count, setCount] = useState(0);
+  const { ref, visible } = useInView(0.3);
+  useEffect(() => {
+    if (!visible) return;
+    let start = 0;
+    const step = Math.ceil(target / 40);
+    const timer = setInterval(() => {
+      start += step;
+      if (start >= target) { setCount(target); clearInterval(timer); }
+      else setCount(start);
+    }, 30);
+    return () => clearInterval(timer);
+  }, [visible, target]);
+  return <span ref={ref}>{count.toLocaleString("vi-VN")}{suffix}</span>;
+}
+
+// ── ITMarketSection ────────────────────────────────────────────────────────
+function ITMarketSection() {
+  const { ref: sectionRef, visible } = useInView(0.1);
+
+  const langs = [
+    { name: "Javascript / TypeScript", pct: 88, color: "bg-blue-600" },
+    { name: "Python (AI & Data)",       pct: 75, color: "bg-blue-500" },
+    { name: "Java / Enterprise",        pct: 62, color: "bg-blue-400" },
+    { name: "Go / Rust",                pct: 45, color: "bg-indigo-500" },
+  ];
+
+  const bars = [
+    { label: "Q1", h: 60,  color: "from-blue-300 to-blue-400"  },
+    { label: "Q2", h: 80,  color: "from-blue-400 to-blue-500"  },
+    { label: "Q3", h: 100, color: "from-blue-500 to-blue-600"  },
+    { label: "Q4", h: 130, color: "from-blue-600 to-indigo-600" },
+  ];
+
+  return (
+    <section className="py-16 bg-white border-y border-slate-100 overflow-hidden">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+        {/* Header — fade up */}
+        <div
+          className="text-center max-w-3xl mx-auto mb-12"
+          style={{
+            opacity: visible ? 1 : 0,
+            transform: visible ? "translateY(0)" : "translateY(28px)",
+            transition: "opacity 0.65s ease, transform 0.65s ease",
+          }}
+        >
+          <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">
+            Thị trường Tuyển dụng IT
+          </h2>
+          <p className="text-slate-500 mt-3 text-base">
+            Phân tích dữ liệu thời gian thực từ hơn 10.000+ tin đăng công nghệ hàng tháng.
+          </p>
+        </div>
+
+        <div ref={sectionRef} className="grid grid-cols-1 md:grid-cols-3 gap-8">
+
+          {/* Card 1 — Ngôn ngữ lập trình */}
+          <div
+            className="bg-[#f8fafc] border border-slate-100 rounded-2xl p-6 hover:shadow-lg transition-shadow duration-300"
+            style={{
+              opacity: visible ? 1 : 0,
+              transform: visible ? "translateY(0)" : "translateY(36px)",
+              transition: "opacity 0.6s ease 0.05s, transform 0.6s ease 0.05s",
+            }}
+          >
+            <div className="flex items-center justify-between mb-5">
+              <span className="text-sm font-bold text-slate-600">Ngôn ngữ lập trình hot nhất</span>
+              <TrendingUp className="size-5 text-blue-600" />
+            </div>
+            <div className="space-y-4">
+              {langs.map((lang, i) => (
+                <div key={lang.name}>
+                  <div className="flex justify-between text-xs font-bold mb-1.5">
+                    <span className="text-slate-700">{lang.name}</span>
+                    <span className="text-blue-600">{lang.pct}%</span>
+                  </div>
+                  <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full ${lang.color} rounded-full`}
+                      style={{
+                        width: visible ? `${lang.pct}%` : "0%",
+                        transition: `width 0.8s cubic-bezier(0.4,0,0.2,1) ${0.2 + i * 0.12}s`,
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Card 2 — Bar Chart theo quý */}
+          <div
+            className="bg-[#f8fafc] border border-slate-100 rounded-2xl p-6 hover:shadow-lg transition-shadow duration-300"
+            style={{
+              opacity: visible ? 1 : 0,
+              transform: visible ? "translateY(0)" : "translateY(36px)",
+              transition: "opacity 0.6s ease 0.18s, transform 0.6s ease 0.18s",
+            }}
+          >
+            <div className="flex items-center justify-between mb-5">
+              <span className="text-sm font-bold text-slate-600">Nhu cầu tuyển dụng theo quý</span>
+              <span className="text-xs font-bold bg-blue-100 text-blue-700 px-2.5 py-0.5 rounded-full animate-pulse">
+                ↑ Tăng
+              </span>
+            </div>
+            <div className="flex items-end justify-between h-40 pt-4 px-2">
+              {bars.map((bar, i) => (
+                <div key={bar.label} className="flex flex-col items-center gap-2 flex-1 group">
+                  <div className="relative w-8 flex items-end justify-center">
+                    {/* Tooltip */}
+                    <span className="absolute -top-6 text-[9px] font-bold text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                      {bar.label}
+                    </span>
+                    <div
+                      className={`w-full bg-gradient-to-t ${bar.color} rounded-t-lg group-hover:opacity-90 transition-opacity`}
+                      style={{
+                        height: visible ? `${bar.h}px` : "0px",
+                        transition: `height 0.75s cubic-bezier(0.34,1.56,0.64,1) ${0.3 + i * 0.1}s`,
+                      }}
+                    />
+                  </div>
+                  <span className="text-[10px] font-bold text-slate-400">{bar.label}</span>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-slate-400 font-semibold text-center mt-4">
+              Nhu cầu tăng đột biến vào cuối năm ở vị trí Web &amp; Mobile.
+            </p>
+          </div>
+
+          {/* Card 3 — Mức lương */}
+          <div
+            className="bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-2xl p-6 shadow-lg shadow-blue-500/25 flex flex-col justify-between"
+            style={{
+              opacity: visible ? 1 : 0,
+              transform: visible ? "translateY(0) scale(1)" : "translateY(36px) scale(0.97)",
+              transition: "opacity 0.6s ease 0.32s, transform 0.6s ease 0.32s",
+            }}
+          >
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium opacity-80">Mức lương trung bình ngành IT</span>
+                <Award className="size-5 opacity-80" />
+              </div>
+              <h3 className="text-3xl font-extrabold mt-2 tabular-nums">
+                $<AnimatedCounter target={2850} />
+              </h3>
+              <p className="text-xs opacity-90 mt-1.5 flex items-center gap-1">
+                <span className="text-green-300 font-bold">↑ 12.5%</span> so với cùng kỳ năm ngoái
+              </p>
+
+              {/* Mini sparkline visual */}
+              <div className="flex items-end gap-1 mt-4 h-8">
+                {[30, 45, 38, 52, 48, 62, 58, 72, 68, 80, 76, 100].map((h, i) => (
+                  <div
+                    key={i}
+                    className="flex-1 bg-white/20 rounded-sm"
+                    style={{
+                      height: visible ? `${h}%` : "0%",
+                      transition: `height 0.5s ease ${0.5 + i * 0.04}s`,
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div className="border-t border-white/20 pt-4 mt-4 flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2">
+                <div className="flex -space-x-1.5">
+                  {["bg-slate-300", "bg-slate-400", "bg-blue-300"].map((bg, i) => (
+                    <div key={i} className={`w-6 h-6 rounded-full ${bg} border-2 border-blue-600`} />
+                  ))}
+                </div>
+                <span className="font-semibold">Active: 4,500+ Devs</span>
+              </div>
+              <span className="underline font-bold hover:text-blue-200 cursor-pointer transition-colors">
+                Xem báo cáo
+              </span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ── WhyLeftContent ─────────────────────────────────────────────────────────
+function WhyLeftContent() {
+  const { ref, visible } = useInView();
+  const features = [
+    {
+      icon: <Zap className="size-5 fill-blue-600/10" />,
+      iconBg: "bg-blue-50 border-blue-100 text-blue-600",
+      title: "Khớp nối Tech-stack bằng AI",
+      desc: "Chúng tôi khớp nối chính xác CV của bạn với công nghệ mà các công ty đang tuyển dụng.",
+    },
+    {
+      icon: <Users className="size-5" />,
+      iconBg: "bg-indigo-50 border-indigo-100 text-indigo-600",
+      title: "Hệ sinh thái Tech Hub",
+      desc: "Kết nối và chia sẻ cùng cộng đồng lập trình viên rộng lớn toàn quốc.",
+    },
+    {
+      icon: <Award className="size-5" />,
+      iconBg: "bg-emerald-50 border-emerald-100 text-emerald-600",
+      title: "Thông tin minh bạch 100%",
+      desc: "Mức lương, chế độ đãi ngộ, quy trình phỏng vấn được hiển thị rõ ràng, xác thực.",
+    },
+  ];
+  return (
+    <div
+      ref={ref}
+      className="lg:col-span-6 space-y-6 text-left"
+      style={{
+        opacity: visible ? 1 : 0,
+        transform: visible ? "translateX(0)" : "translateX(-48px)",
+        transition: "opacity 0.7s ease, transform 0.7s ease",
+      }}
+    >
+      <h2 className="text-3xl font-extrabold text-slate-900 leading-tight">
+        Tại sao nên chọn <br />
+        <span className="text-blue-600">RecruitHub IT?</span>
+      </h2>
+      <p className="text-slate-500 text-base leading-relaxed">
+        Chuyên trang dành riêng cho giới lập trình viên tại Việt Nam, mang đến giải pháp tìm việc và phát triển sự nghiệp thông minh nhất.
+      </p>
+
+      <div className="space-y-4 pt-2">
+        {features.map((f, idx) => (
+          <div
+            key={idx}
+            className="flex gap-4 group"
+            style={{
+              opacity: visible ? 1 : 0,
+              transform: visible ? "translateX(0)" : "translateX(-32px)",
+              transition: `opacity 0.6s ease ${0.15 + idx * 0.13}s, transform 0.6s ease ${0.15 + idx * 0.13}s`,
+            }}
+          >
+            <div className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 transition-all duration-300 group-hover:scale-110 group-hover:shadow-md ${f.iconBg}`}>
+              {f.icon}
+            </div>
+            <div>
+              <h4 className="font-extrabold text-slate-900 text-base group-hover:text-blue-700 transition-colors duration-200">{f.title}</h4>
+              <p className="text-slate-500 text-sm mt-0.5">{f.desc}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── WhyRightCards ──────────────────────────────────────────────────────────
+function WhyRightCards() {
+  const { ref, visible } = useInView();
+  const cards = [
+    {
+      icon: <Building className="size-5" />,
+      iconBg: "bg-blue-50 text-blue-600",
+      glowColor: "group-hover:shadow-blue-100",
+      borderHover: "group-hover:border-blue-200",
+      title: "Doanh nghiệp uy tín",
+      desc: "Hơn 500+ doanh nghiệp hàng đầu đã được ban quản trị kiểm duyệt và cấp chứng nhận thông tin tuyển dụng sạch.",
+      stat: { target: 500, suffix: "+", label: "Doanh nghiệp" },
+      statColor: "text-blue-600",
+    },
+    {
+      icon: <Users className="size-5" />,
+      iconBg: "bg-emerald-50 text-emerald-600",
+      glowColor: "group-hover:shadow-emerald-100",
+      borderHover: "group-hover:border-emerald-200",
+      title: "Cộng đồng Developer",
+      desc: "Nơi giao lưu học hỏi, chia sẻ kinh nghiệm viết code, phỏng vấn và thăng tiến trong sự nghiệp công nghệ.",
+      stat: { target: 4500, suffix: "+", label: "Dev đã tìm được việc" },
+      statColor: "text-emerald-600",
+    },
+    {
+      icon: <Zap className="size-5 fill-amber-400/20" />,
+      iconBg: "bg-amber-50 text-amber-600",
+      glowColor: "group-hover:shadow-amber-100",
+      borderHover: "group-hover:border-amber-200",
+      title: "Khớp nối AI thông minh",
+      desc: "Thuật toán AI phân tích tech-stack trong CV và kết nối bạn với đúng vị trí phù hợp nhất.",
+      stat: { target: 92, suffix: "%", label: "Tỉ lệ phù hợp" },
+      statColor: "text-amber-600",
+    },
+    {
+      icon: <Award className="size-5" />,
+      iconBg: "bg-violet-50 text-violet-600",
+      glowColor: "group-hover:shadow-violet-100",
+      borderHover: "group-hover:border-violet-200",
+      title: "Lương minh bạch",
+      desc: "Tất cả tin tuyển dụng đều hiển thị mức lương rõ ràng — không còn cảnh 'thỏa thuận' mơ hồ.",
+      stat: { target: 5000, suffix: "+", label: "Tin có lương rõ ràng" },
+      statColor: "text-violet-600",
+    },
+  ];
+  return (
+    <div
+      ref={ref}
+      className="lg:col-span-6 grid grid-cols-1 sm:grid-cols-2 gap-5"
+      style={{
+        opacity: visible ? 1 : 0,
+        transform: visible ? "translateX(0)" : "translateX(48px)",
+        transition: "opacity 0.7s ease 0.1s, transform 0.7s ease 0.1s",
+      }}
+    >
+      {cards.map((card, idx) => (
+        <div
+          key={idx}
+          className={`group bg-white border border-slate-100 rounded-3xl p-6 shadow-sm hover:shadow-xl transition-all duration-400 text-left space-y-3 cursor-default ${card.glowColor} ${card.borderHover}`}
+          style={{
+            opacity: visible ? 1 : 0,
+            transform: visible ? "translateY(0) scale(1)" : "translateY(24px) scale(0.97)",
+            transition: `opacity 0.55s ease ${0.1 + idx * 0.1}s, transform 0.55s ease ${0.1 + idx * 0.1}s, box-shadow 0.3s ease`,
+          }}
+        >
+          {/* Icon */}
+          <div className={`w-11 h-11 rounded-2xl ${card.iconBg} flex items-center justify-center transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3`}>
+            {card.icon}
+          </div>
+          {/* Title */}
+          <h4 className="font-bold text-slate-900 text-sm leading-snug group-hover:text-slate-700 transition-colors">{card.title}</h4>
+          {/* Desc */}
+          <p className="text-slate-400 text-xs leading-relaxed">{card.desc}</p>
+          {/* Animated Stat */}
+          <div className={`pt-2 border-t border-slate-100 flex items-baseline gap-1`}>
+            <span className={`text-xl font-black ${card.statColor}`}>
+              <AnimatedCounter target={card.stat.target} suffix={card.stat.suffix} />
+            </span>
+            <span className="text-[11px] text-slate-400 font-medium">{card.stat.label}</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export default function Home() {
@@ -214,115 +573,7 @@ export default function Home() {
       </section>
 
       {/* THỊ TRƯỜNG TUYỂN DỤNG IT */}
-      <section className="py-16 bg-white border-y border-slate-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-3xl mx-auto mb-12">
-            <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Thị trường Tuyển dụng IT</h2>
-            <p className="text-slate-500 mt-3 text-base">Phân tích dữ liệu thời gian thực từ hơn 10.000+ tin đăng công nghệ hàng tháng.</p>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            
-            {/* Stat Box 1 */}
-            <div className="bg-[#f8fafc] border border-slate-100 rounded-2xl p-6 hover:shadow-md transition">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-sm font-bold text-slate-500">Ngôn ngữ lập trình hot nhất</span>
-                <TrendingUp className="size-5 text-blue-600" />
-              </div>
-              <div className="space-y-3.5">
-                <div>
-                  <div className="flex justify-between text-xs font-bold mb-1">
-                    <span>Javascript / TypeScript</span>
-                    <span className="text-blue-600">88%</span>
-                  </div>
-                  <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
-                    <div className="h-full bg-blue-600 rounded-full" style={{ width: "88%" }} />
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between text-xs font-bold mb-1">
-                    <span>Python (AI & Data)</span>
-                    <span className="text-blue-600">75%</span>
-                  </div>
-                  <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
-                    <div className="h-full bg-blue-500 rounded-full" style={{ width: "75%" }} />
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between text-xs font-bold mb-1">
-                    <span>Java / Enterprise</span>
-                    <span className="text-blue-600">62%</span>
-                  </div>
-                  <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
-                    <div className="h-full bg-blue-400 rounded-full" style={{ width: "62%" }} />
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between text-xs font-bold mb-1">
-                    <span>Go / Rust</span>
-                    <span className="text-blue-600">45%</span>
-                  </div>
-                  <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
-                    <div className="h-full bg-indigo-500 rounded-full" style={{ width: "45%" }} />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Stat Box 2 */}
-            <div className="bg-[#f8fafc] border border-slate-100 rounded-2xl p-6 hover:shadow-md transition">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-sm font-bold text-slate-500">Nhu cầu tuyển dụng theo quý</span>
-                <span className="text-xs font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded">Tăng</span>
-              </div>
-              <div className="flex items-end justify-between h-40 pt-4">
-                <div className="flex flex-col items-center gap-2 w-12">
-                  <div className="w-8 bg-blue-200 rounded-t-lg transition-all hover:bg-blue-300" style={{ height: "60px" }} />
-                  <span className="text-[10px] font-bold text-slate-400">Q1</span>
-                </div>
-                <div className="flex flex-col items-center gap-2 w-12">
-                  <div className="w-8 bg-blue-300 rounded-t-lg transition-all hover:bg-blue-400" style={{ height: "80px" }} />
-                  <span className="text-[10px] font-bold text-slate-400">Q2</span>
-                </div>
-                <div className="flex flex-col items-center gap-2 w-12">
-                  <div className="w-8 bg-blue-400 rounded-t-lg transition-all hover:bg-blue-500" style={{ height: "100px" }} />
-                  <span className="text-[10px] font-bold text-slate-400">Q3</span>
-                </div>
-                <div className="flex flex-col items-center gap-2 w-12">
-                  <div className="w-8 bg-blue-600 rounded-t-lg transition-all hover:bg-blue-700" style={{ height: "130px" }} />
-                  <span className="text-[10px] font-bold text-slate-505">Q4</span>
-                </div>
-              </div>
-              <p className="text-xs text-slate-400 font-semibold text-center mt-4">Nhu cầu tăng đột biến vào cuối năm ở vị trí Web & Mobile.</p>
-            </div>
-
-            {/* Stat Box 3 */}
-            <div className="bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-2xl p-6 shadow-lg shadow-blue-500/25 flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium opacity-80">Mức lương trung bình ngành IT</span>
-                  <Award className="size-5" />
-                </div>
-                <h3 className="text-3xl font-extrabold mt-2">$2,850</h3>
-                <p className="text-xs opacity-90 mt-1">Tăng 12.5% so với cùng kỳ năm ngoái</p>
-              </div>
-              
-              <div className="border-t border-white/20 pt-4 mt-6 flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2">
-                  <div className="flex -space-x-2">
-                    <div className="w-6 h-6 rounded-full bg-slate-300 border border-blue-600" />
-                    <div className="w-6 h-6 rounded-full bg-slate-400 border border-blue-600" />
-                    <div className="w-6 h-6 rounded-full bg-slate-500 border border-blue-600" />
-                  </div>
-                  <span className="font-semibold">Active: 4,500+ Devs</span>
-                </div>
-                <span className="underline font-bold hover:text-blue-100 cursor-pointer">Xem báo cáo</span>
-              </div>
-            </div>
-
-          </div>
-        </div>
-      </section>
+      <ITMarketSection />
 
       {/* TOP TECH EMPLOYERS */}
       <section className="py-16 bg-[#f8fafc]">
@@ -596,72 +847,16 @@ export default function Home() {
       </section>
 
       {/* TẠI SAO NÊN CHỌN RECRUITHUB */}
-      <section className="py-16 bg-[#f8fafc]">
+      <section className="py-20 bg-[#f8fafc] overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-            
-            {/* Left Content */}
-            <div className="lg:col-span-6 space-y-6 text-left">
-              <h2 className="text-3xl font-extrabold text-slate-900 leading-tight">
-                Tại sao nên chọn <br />
-                <span className="text-blue-600">RecruitHub IT?</span>
-              </h2>
-              <p className="text-slate-500 text-base leading-relaxed">
-                Chuyên trang dành riêng cho giới lập trình viên tại Việt Nam, mang đến giải pháp tìm việc và phát triển sự nghiệp thông minh nhất.
-              </p>
-              
-              <div className="space-y-4 pt-2">
-                <div className="flex gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0 text-blue-600">
-                    <Zap className="size-5 fill-blue-600/10" />
-                  </div>
-                  <div>
-                    <h4 className="font-extrabold text-slate-900 text-base">Khớp nối Tech-stack bằng AI</h4>
-                    <p className="text-slate-500 text-sm mt-0.5">Chúng tôi khớp nối chính xác CV của bạn với công nghệ mà các công ty đang tuyển dụng.</p>
-                  </div>
-                </div>
 
-                <div className="flex gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0 text-indigo-600">
-                    <Users className="size-5" />
-                  </div>
-                  <div>
-                    <h4 className="font-extrabold text-slate-900 text-base">Hệ sinh thái Tech Hub</h4>
-                    <p className="text-slate-500 text-sm mt-0.5">Kết nối và chia sẻ cùng cộng đồng lập trình viên rộng lớn toàn quốc.</p>
-                  </div>
-                </div>
+            {/* Left Content — slide-in-left */}
+            <WhyLeftContent />
 
-                <div className="flex gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center shrink-0 text-emerald-600">
-                    <Award className="size-5" />
-                  </div>
-                  <div>
-                    <h4 className="font-extrabold text-slate-900 text-base">Thông tin minh bạch 100%</h4>
-                    <p className="text-slate-500 text-sm mt-0.5">Mức lương, chế độ đãi ngộ, quy trình phỏng vấn được hiển thị rõ ràng, xác thực.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+            {/* Right cards — slide-in-right */}
+            <WhyRightCards />
 
-            {/* Right Interactive cards */}
-            <div className="lg:col-span-6 grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm hover:shadow-md transition text-left space-y-4">
-                <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                  <Building className="size-5" />
-                </div>
-                <h4 className="font-bold text-slate-900">Doanh nghiệp uy tín</h4>
-                <p className="text-slate-500 text-xs leading-relaxed">Hơn 500+ doanh nghiệp hàng đầu đã được ban quản trị kiểm duyệt và cấp chứng nhận thông tin tuyển dụng sạch.</p>
-              </div>
-
-              <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm hover:shadow-md transition text-left space-y-4">
-                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                  <Users className="size-5" />
-                </div>
-                <h4 className="font-bold text-slate-900">Cộng đồng Developer</h4>
-                <p className="text-slate-500 text-xs leading-relaxed">Nơi giao lưu học hỏi, chia sẻ kinh nghiệm viết code, phỏng vấn và thăng tiến trong sự nghiệp công nghệ.</p>
-              </div>
-            </div>
-            
           </div>
         </div>
       </section>

@@ -189,34 +189,86 @@ export default function AdminDashboard() {
               <h3 className="font-extrabold text-slate-900 text-lg leading-tight">Thống kê đăng tin tuyển dụng</h3>
               <p className="text-slate-400 text-xs font-medium mt-1">Xu hướng tuyển dụng 6 tháng gần nhất</p>
             </div>
-            <span className="text-xs font-bold text-[#1e3fae] bg-[#1e3fae]/10 px-2.5 py-1 rounded-lg">Năm 2026</span>
+            <span className="text-xs font-bold text-[#1e3fae] bg-[#1e3fae]/10 px-2.5 py-1 rounded-lg">
+              Năm {new Date().getFullYear()}
+            </span>
           </div>
 
-          {/* Simple Simulated Chart */}
-          <div className="h-64 flex items-end justify-between gap-4 pt-4 px-2">
-            {[
-              { month: "Th 1", value: 45, color: "bg-slate-200" },
-              { month: "Th 2", value: 65, color: "bg-slate-200" },
-              { month: "Th 3", value: 85, color: "bg-slate-200" },
-              { month: "Th 4", value: 110, color: "bg-[#1e3fae]" },
-              { month: "Th 5", value: jobs.length || 30, color: "bg-gradient-to-t from-[#1e3fae] to-sky-400" },
-              { month: "Th 6 (Dự kiến)", value: 50, color: "bg-dashed bg-slate-100 border-2 border-slate-200 border-dashed" }
-            ].map((item, idx) => (
-              <div key={idx} className="flex-1 flex flex-col items-center gap-3 h-full justify-end group">
-                <div className="relative w-full flex justify-center">
-                  {/* Tooltip */}
-                  <span className="absolute top-[-28px] scale-0 group-hover:scale-100 transition-transform bg-slate-800 text-white font-bold text-[10px] px-2 py-1 rounded shadow pointer-events-none">
-                    {item.value} tin
-                  </span>
-                  {/* Bar */}
-                  <div
-                    className={`w-full max-w-[40px] rounded-t-lg transition-all duration-500 hover:opacity-90 ${item.color}`}
-                    style={{ height: `${(item.value / 120) * 100}%`, minHeight: "8px" }}
-                  />
-                </div>
-                <span className="text-xs font-bold text-slate-500">{item.month}</span>
+          {/* Chart — tính từ jobs thực */}
+          {(() => {
+            const now = new Date();
+            // Tạo 6 tháng: 5 tháng đã qua + tháng hiện tại
+            const months = Array.from({ length: 6 }, (_, i) => {
+              const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1);
+              return {
+                year: d.getFullYear(),
+                month: d.getMonth(), // 0-indexed
+                label: `Th ${d.getMonth() + 1}`,
+                isCurrent: d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear(),
+                isFuture: d > now,
+              };
+            });
+
+            // Đếm số tin đăng theo tháng từ jobs
+            const counts = months.map(m => {
+              const count = jobs.filter(j => {
+                const d = new Date(j.createdAt);
+                return d.getFullYear() === m.year && d.getMonth() === m.month;
+              }).length;
+              return { ...m, count };
+            });
+
+            const maxCount = Math.max(...counts.map(m => m.count), 1);
+
+            return (
+              <div className="h-64 flex items-end justify-between gap-4 pt-4 px-2">
+                {counts.map((item, idx) => {
+                  const heightPct = Math.max((item.count / maxCount) * 100, item.count > 0 ? 8 : 4);
+                  const barColor = item.isFuture
+                    ? "bg-slate-100 border-2 border-slate-200 border-dashed"
+                    : item.isCurrent
+                    ? "bg-gradient-to-t from-[#1e3fae] to-sky-400"
+                    : item.count > 0
+                    ? "bg-[#1e3fae]/70"
+                    : "bg-slate-200";
+
+                  return (
+                    <div key={idx} className="flex-1 flex flex-col items-center gap-3 h-full justify-end group">
+                      <div className="relative w-full flex justify-center">
+                        {/* Tooltip */}
+                        <span className="absolute top-[-28px] scale-0 group-hover:scale-100 transition-transform bg-slate-800 text-white font-bold text-[10px] px-2 py-1 rounded shadow pointer-events-none whitespace-nowrap">
+                          {item.isFuture ? "Dự kiến" : `${item.count} tin`}
+                        </span>
+                        {/* Bar */}
+                        <div
+                          className={`w-full max-w-[40px] rounded-t-lg transition-all duration-500 hover:opacity-90 ${barColor}`}
+                          style={{ height: `${heightPct}%`, minHeight: "6px" }}
+                        />
+                      </div>
+                      <span className={`text-xs font-bold ${item.isCurrent ? "text-[#1e3fae]" : "text-slate-500"}`}>
+                        {item.label}{item.isFuture ? " (Dự kiến)" : ""}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
-            ))}
+            );
+          })()}
+
+          {/* Legend */}
+          <div className="flex items-center gap-5 text-[11px] font-semibold text-slate-400 border-t border-slate-100 pt-4">
+            <span className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded-sm bg-gradient-to-t from-[#1e3fae] to-sky-400 inline-block" />
+              Tháng hiện tại
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded-sm bg-[#1e3fae]/70 inline-block" />
+              Đã đăng
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded-sm bg-slate-200 inline-block" />
+              Không có tin
+            </span>
           </div>
         </div>
 

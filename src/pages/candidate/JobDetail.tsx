@@ -7,6 +7,8 @@ import {
 import { Link, useNavigate, useParams, useLocation } from "react-router-dom";
 import { jobService } from "../../services/job.service";
 import { employerService } from "../../services/employer.service";
+import { candidateService } from "../../services/candidate.service";
+import { useAuthStore } from "../../stores/authStore";
 // Danh sách icon phúc lợi có thể chọn
 const BENEFIT_ICONS = [
   { key: "gift",           label: "🎁 Thưởng",       Icon: Gift },
@@ -174,10 +176,13 @@ export default function JobDetail() {
   const navigate = useNavigate();
   const location = useLocation();
   const fromPath = location.state?.from;
+  const { isAuthenticated } = useAuthStore();
   const [job, setJob] = useState<JobData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [imgError, setImgError] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+  const [isSavingBookmark, setIsSavingBookmark] = useState(false);
 
 
   // const API_URL = import.meta.env.VITE_API_BASE_URL || '';  
@@ -209,6 +214,44 @@ export default function JobDetail() {
     };
     fetchJob();
   }, [jobId]);
+
+  // ── Kiểm tra job đã lưu chưa ──
+  useEffect(() => {
+    if (!isAuthenticated || !jobId) return;
+    const checkBookmark = async () => {
+      try {
+        const bookmarks = await candidateService.getBookmarks();
+        // bookmarks là array hoặc object có .data
+        const list = Array.isArray(bookmarks) ? bookmarks : (bookmarks?.data ?? []);
+        const saved = list.some(
+          (b: { id?: string | number; jobId?: string | number }) =>
+            String(b.id) === String(jobId) || String(b.jobId) === String(jobId)
+        );
+        setIsSaved(saved);
+      } catch {
+        // không ảnh hưởng UX
+      }
+    };
+    checkBookmark();
+  }, [isAuthenticated, jobId]);
+
+  // ── Toggle bookmark ──
+  const handleToggleBookmark = async () => {
+    if (!isAuthenticated) {
+      navigate(`/login?mode=login&redirectTo=/candidate/jobs/${jobId}`);
+      return;
+    }
+    if (!jobId || isSavingBookmark) return;
+    setIsSavingBookmark(true);
+    try {
+      await candidateService.toggleBookmark(jobId);
+      setIsSaved((prev) => !prev);
+    } catch {
+      // silent fail
+    } finally {
+      setIsSavingBookmark(false);
+    }
+  };
 
   // ── Loading ──
   if (loading) {
@@ -404,8 +447,24 @@ export default function JobDetail() {
               >
                 <Send className="w-4 h-4" /> Nộp đơn ngay
               </button>
-              <button className="w-full bg-white border border-slate-200 text-slate-700 py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-slate-50 transition-colors text-sm">
-                <Bookmark className="w-4 h-4" /> Lưu việc làm
+              <button
+                onClick={handleToggleBookmark}
+                disabled={isSavingBookmark}
+                className={`w-full border py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all text-sm ${
+                  isSaved
+                    ? "bg-blue-50 border-[#1e3fae] text-[#1e3fae] hover:bg-blue-100"
+                    : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+                } disabled:opacity-60 disabled:cursor-not-allowed`}
+              >
+                {isSavingBookmark ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Bookmark
+                    className="w-4 h-4"
+                    fill={isSaved ? "#1e3fae" : "none"}
+                  />
+                )}
+                {isSaved ? "Đã lưu" : "Lưu việc làm"}
               </button>
             </div>
 
